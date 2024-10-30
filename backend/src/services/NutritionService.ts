@@ -1,4 +1,5 @@
 import { DataProps } from "../controllers/NutritionController"
+// Importa a biblioteca Google Generative AI
 import { GoogleGenerativeAI } from "@google/generative-ai"
 
 class NutritionService {
@@ -6,7 +7,8 @@ class NutritionService {
         try {
             const genAI = new GoogleGenerativeAI(process.env.API_KEY!)
             const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" })
-
+            
+            // Define o prompt para o modelo
             const response = await model.generateContent(`Crie uma dieta completa para uma pessoa com nome: ${name} do
                  sexo ${gender} com peso atual: ${weight}kg, altura: ${height}, idade: ${age} anos e com foco e objetivo
                   em ${objective}, atualmente nível de atividade: ${level} e ignore qualquer outro parametro que não seja
@@ -26,10 +28,13 @@ class NutritionService {
 
                 const jsonText = response.response.candidates[0]?.content.parts[0].text as String;
 
+                // Remove qualquer formatação markdown e espaços em branco
                 let jsonString = jsonText.replace(/```\w*\n/g, '').replace(/\n```/g, '').trim();
 
+                // Converte a string JSON para um objeto JavaScript
                 let jsonObject = JSON.parse(jsonString)
-
+                
+                // Retorna o objeto JSON contendo a dieta gerada
                 return { data: jsonObject }
             }
 
