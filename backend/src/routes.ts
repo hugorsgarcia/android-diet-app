@@ -10,13 +10,17 @@ import{
     FastifyReply,
 }from "fastify"
 
-/* Função assíncrona que define rotas para uma instância Fastify.
-A função recebe a instância do servidor Fastify e as opções do plugin.*/
+import { NutritionController } from "./controllers/NutritionController" 
+
+
 export async function routes(fastify: FastifyInstance, options: FastifyPluginOptions){
-    /* Define uma rota HTTP GET para o caminho "/teste".
-     Envia uma resposta JSON com o objeto { Ok: true }.*/
+
     fastify.get("/teste", (request: FastifyRequest, reply: FastifyReply) =>{
         console.log("Rota chamada")
         reply.send({Ok: true})
+    })
+
+    fastify.get("/create", async(request: FastifyRequest, reply: FastifyReply) =>{
+        return new NutritionController().handle(request, reply)
     })
 }
