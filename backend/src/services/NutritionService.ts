@@ -1,11 +1,11 @@
 import { DataProps } from "../controllers/NutritionController"
-import {GoogleGenerativeAI} from "@google/generative-ai"
+import { GoogleGenerativeAI } from "@google/generative-ai"
 
-class NutritionService{
-    async execute({name, age, gender, weight, height, objective, level}: DataProps){
-        try{
+class NutritionService {
+    async execute({ name, age, gender, weight, height, objective, level }: DataProps) {
+        try {
             const genAI = new GoogleGenerativeAI(process.env.API_KEY!)
-            const model = genAI.getGenerativeModel({model: "gemini-1.5-flash"})
+            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" })
 
             const response = await model.generateContent(`Crie uma dieta completa para uma pessoa com nome: ${name} do
                  sexo ${gender} com peso atual: ${weight}kg, altura: ${height}, idade: ${age} anos e com foco e objetivo
@@ -20,19 +20,26 @@ class NutritionService{
                           no prompt, retorne em json e nenhuma propriedade pode ter acento.`);
             console.log(JSON.stringify(response, null, 2));
 
-            if (response.response && response.response.candidates){
+
+
+            if (response.response && response.response.candidates) {
+
                 const jsonText = response.response.candidates[0]?.content.parts[0].text as String;
 
-                return {data: jsonText}
+                let jsonString = jsonText.replace(/```\w*\n/g, '').replace(/\n```/g, '').trim();
+
+                let jsonObject = JSON.parse(jsonString)
+
+                return { data: jsonObject }
             }
-           
 
 
-        }catch(err){
+
+        } catch (err) {
             console.log("Erro JSON", err)
             throw new Error("Falha")
         }
     }
 }
 
-export {NutritionService}
+export { NutritionService }
