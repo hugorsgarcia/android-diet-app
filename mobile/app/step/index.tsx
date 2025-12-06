@@ -71,7 +71,9 @@ export default function Step() {
               value={name}
               onChangeText={setName}
               placeholder="Digite seu nome"
-              placeholderTextColor={colors.white + "60"}
+              placeholderTextColor="#FFFFFF99"
+              keyboardAppearance="dark"
+              selectionColor={colors.green}
             />
 
             <Text style={styles.label}>Peso (kg):</Text>
@@ -80,8 +82,10 @@ export default function Step() {
               value={weight}
               onChangeText={setWeight}
               placeholder="Ex: 75"
-              placeholderTextColor={colors.white + "60"}
+              placeholderTextColor="#FFFFFF99"
               keyboardType="numeric"
+              keyboardAppearance="dark"
+              selectionColor={colors.green}
             />
 
             <Text style={styles.label}>Altura (cm):</Text>
@@ -90,8 +94,10 @@ export default function Step() {
               value={height}
               onChangeText={setHeight}
               placeholder="Ex: 175"
-              placeholderTextColor={colors.white + "60"}
+              placeholderTextColor="#FFFFFF99"
               keyboardType="numeric"
+              keyboardAppearance="dark"
+              selectionColor={colors.green}
             />
 
             <Text style={styles.label}>Idade:</Text>
@@ -100,8 +106,10 @@ export default function Step() {
               value={age}
               onChangeText={setAge}
               placeholder="Ex: 25"
-              placeholderTextColor={colors.white + "60"}
+              placeholderTextColor="#FFFFFF99"
               keyboardType="numeric"
+              keyboardAppearance="dark"
+              selectionColor={colors.green}
             />
           </>
         ) : (
@@ -279,20 +287,20 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   input: {
-    backgroundColor: colors.white + "20",
+    backgroundColor: colors.white + "15",
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
     color: colors.white,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: colors.white + "30",
+    borderColor: colors.white + "40",
   },
   optionsContainer: {
     gap: 12,
   },
   optionButton: {
-    backgroundColor: colors.white + "20",
+    backgroundColor: colors.white + "10",
     borderRadius: 8,
     paddingVertical: 14,
     paddingHorizontal: 16,
@@ -300,17 +308,20 @@ const styles = StyleSheet.create({
     borderColor: colors.white + "30",
   },
   optionButtonSelected: {
-    backgroundColor: colors.blue + "30",
+    backgroundColor: colors.blue + "40",
     borderColor: colors.blue,
+    borderWidth: 2,
   },
   optionText: {
-    color: colors.white + "80",
+    color: colors.white,
     fontSize: 16,
     fontWeight: '600',
     textAlign: 'center',
+    opacity: 0.7,
   },
   optionTextSelected: {
     color: colors.white,
+    opacity: 1,
   },
   button: {
     backgroundColor: colors.blue,
