@@ -40,10 +40,13 @@ export default function Create() {
   useEffect(() => {
     async function generateDiet() {
       try {
-        // Configure a URL da API de acordo com o ambiente
-        // Para Android Emulator use: http://10.0.2.2:3333
-        // Para iOS Simulator ou dispositivo físico, use o IP da sua máquina (ex: http://192.168.1.10:3333)
-        const apiUrl = "http://10.0.2.2:3333/create"
+        // Configure a URL da API de acordo com o ambiente:
+        // - Android Emulator: http://10.0.2.2:3333
+        // - Dispositivo físico (Android/iOS): http://192.168.1.10:3333 (IP da sua máquina)
+        // - iOS Simulator: http://localhost:3333
+        
+        // Use o IP da sua máquina para dispositivos físicos
+        const apiUrl = "http://192.168.1.10:3333/create"
 
         console.log("Enviando dados para API:", {
           name: user.name,
