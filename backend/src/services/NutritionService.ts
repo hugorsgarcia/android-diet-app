@@ -6,20 +6,69 @@ class NutritionService {
     async execute({ name, age, gender, weight, height, objective, level }: DataProps) {
         try {
             const genAI = new GoogleGenerativeAI(process.env.API_KEY!)
-            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" })
+            const model = genAI.getGenerativeModel({ 
+                model: "gemini-2.0-flash-exp",
+                generationConfig: {
+                    temperature: 0.7,
+                    topP: 0.8,
+                    topK: 40,
+                    maxOutputTokens: 2048,
+                    responseMimeType: "application/json",
+                }
+            })
             
-            // Define o prompt para o modelo
-            const response = await model.generateContent(`Crie uma dieta completa para uma pessoa com nome: ${name} do
-                 sexo ${gender} com peso atual: ${weight}kg, altura: ${height}, idade: ${age} anos e com foco e objetivo
-                  em ${objective}, atualmente nível de atividade: ${level} e ignore qualquer outro parametro que não seja
-                   os passados, retorne em json com as respectivas propriedades, propriedade nome o nome da pessoa, propriedade
-                    sexo com sexo, propriedade idade, propriedade altura, propriedade peso, propriedade objetivo com o objetivo
-                     atual, propriedade refeições com uma array contendo dentro cada objeto sendo uma refeição da dieta e
-                      dentro de cada refeição a propriedade horário com horário da refeição, propriedade nome com nome
-                       e a propriedade alimentos com array contendo os alimentos dessa refeição e pode incluir uma
-                        propreidade como suplementos contendo array com sugestão de suplemento que é indicado para
-                         o sexo dessa pessoa e o objetivo dela e não retorne nenhuma observação alem das passadas
-                          no prompt, retorne em json e nenhuma propriedade pode ter acento.`);
+            // Define o prompt otimizado para o Gemini 3
+            const prompt = `
+Você é um nutricionista especialista. Crie uma dieta personalizada completa baseada nos seguintes dados:
+
+DADOS PESSOAIS:
+- Nome: ${name}
+- Sexo: ${gender}
+- Peso: ${weight}kg
+- Altura: ${height}
+- Idade: ${age} anos
+- Objetivo: ${objective}
+- Nível de atividade: ${level}
+
+INSTRUÇÕES:
+1. Calcule as necessidades calóricas e macronutrientes adequadas
+2. Crie um plano alimentar balanceado com 5-6 refeições
+3. Sugira suplementos apropriados para o perfil e objetivo
+4. Inclua horários específicos para cada refeição
+
+FORMATO DE RESPOSTA (JSON):
+{
+  "nome": "string",
+  "sexo": "string", 
+  "idade": number,
+  "altura": "string",
+  "peso": "string",
+  "objetivo": "string",
+  "calorias_diarias": number,
+  "macronutrientes": {
+    "proteinas": "string",
+    "carboidratos": "string", 
+    "gorduras": "string"
+  },
+  "refeicoes": [
+    {
+      "horario": "string",
+      "nome": "string",
+      "alimentos": ["string"]
+    }
+  ],
+  "suplementos": [
+    {
+      "nome": "string",
+      "dosagem": "string",
+      "quando_tomar": "string"
+    }
+  ]
+}
+
+Retorne APENAS o JSON, sem comentários ou formatação markdown.`;
+
+            const response = await model.generateContent(prompt);
             console.log(JSON.stringify(response, null, 2));
 
 
