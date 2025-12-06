@@ -6,16 +6,26 @@ import { useDataStore } from '../../store/data'
 interface ResponseData {
   nome: string;
   sexo: string;
-  idade: string;
+  idade: number | string;
   altura: string;
   peso: string;
   objetivo: string;
+  calorias_diarias?: number;
+  macronutrientes?: {
+    proteinas: string;
+    carboidratos: string;
+    gorduras: string;
+  };
   refeicoes: Array<{
     horario: string;
     nome: string;
     alimentos: string[];
   }>;
-  suplementos: string[];
+  suplementos: Array<string | {
+    nome: string;
+    dosagem: string;
+    quando_tomar: string;
+  }>;
 }
 
 export default function Diet() {
@@ -64,7 +74,33 @@ export default function Diet() {
             <Text style={styles.infoLabel}>Idade:</Text>
             <Text style={styles.infoValue}>{dietData.idade} anos</Text>
           </View>
+          {dietData.calorias_diarias && (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Calorias Diárias:</Text>
+              <Text style={styles.infoValue}>{dietData.calorias_diarias} kcal</Text>
+            </View>
+          )}
         </View>
+
+        {dietData.macronutrientes && (
+          <View style={styles.macroCard}>
+            <Text style={styles.macroTitle}>Macronutrientes</Text>
+            <View style={styles.macroRow}>
+              <View style={styles.macroItem}>
+                <Text style={styles.macroLabel}>Proteínas</Text>
+                <Text style={styles.macroValue}>{dietData.macronutrientes.proteinas}</Text>
+              </View>
+              <View style={styles.macroItem}>
+                <Text style={styles.macroLabel}>Carboidratos</Text>
+                <Text style={styles.macroValue}>{dietData.macronutrientes.carboidratos}</Text>
+              </View>
+              <View style={styles.macroItem}>
+                <Text style={styles.macroLabel}>Gorduras</Text>
+                <Text style={styles.macroValue}>{dietData.macronutrientes.gorduras}</Text>
+              </View>
+            </View>
+          </View>
+        )}
 
         <Text style={styles.sectionTitle}>Refeições</Text>
         {dietData.refeicoes.map((refeicao, index) => (
@@ -88,12 +124,25 @@ export default function Diet() {
           <>
             <Text style={styles.sectionTitle}>Suplementos Recomendados</Text>
             <View style={styles.supplementCard}>
-              {dietData.suplementos.map((suplemento, index) => (
-                <View key={index} style={styles.supplementItem}>
-                  <Text style={styles.supplementBullet}>✓</Text>
-                  <Text style={styles.supplementText}>{suplemento}</Text>
-                </View>
-              ))}
+              {dietData.suplementos.map((suplemento, index) => {
+                const isString = typeof suplemento === 'string';
+                const nome = isString ? suplemento : suplemento.nome;
+                const detalhes = !isString && suplemento.dosagem 
+                  ? `${suplemento.dosagem} - ${suplemento.quando_tomar}`
+                  : null;
+
+                return (
+                  <View key={index} style={styles.supplementItem}>
+                    <Text style={styles.supplementBullet}>✓</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.supplementText}>{nome}</Text>
+                      {detalhes && (
+                        <Text style={styles.supplementDetails}>{detalhes}</Text>
+                      )}
+                    </View>
+                  </View>
+                );
+              })}
             </View>
           </>
         )}
@@ -152,6 +201,37 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.white,
     fontWeight: '600',
+  },
+  macroCard: {
+    backgroundColor: colors.orange + "20",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: colors.orange + "40",
+  },
+  macroTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.orange,
+    marginBottom: 12,
+  },
+  macroRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  macroItem: {
+    alignItems: 'center',
+  },
+  macroLabel: {
+    fontSize: 14,
+    color: colors.white + "70",
+    marginBottom: 4,
+  },
+  macroValue: {
+    fontSize: 18,
+    color: colors.white,
+    fontWeight: 'bold',
   },
   sectionTitle: {
     fontSize: 24,
@@ -221,7 +301,12 @@ const styles = StyleSheet.create({
   supplementText: {
     fontSize: 16,
     color: colors.white,
-    flex: 1,
+    fontWeight: '600',
+  },
+  supplementDetails: {
+    fontSize: 14,
+    color: colors.white + "80",
+    marginTop: 4,
   },
   button: {
     backgroundColor: colors.blue,
