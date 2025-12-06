@@ -44,7 +44,7 @@ export default function Create() {
         if (response.data) {
           // Navegar para a tela de dieta com os dados
           router.push({
-            pathname: "/diet",
+            pathname: "/diet" as any,
             params: { data: JSON.stringify(response.data) }
           })
         }
