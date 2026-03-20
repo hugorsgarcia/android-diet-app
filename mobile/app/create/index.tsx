@@ -4,6 +4,17 @@ import { useDataStore } from '../../store/data'
 import { useEffect } from 'react'
 import { router } from 'expo-router'
 import axios from 'axios'
+import axiosRetry from 'axios-retry'
+
+// Configuração de resiliência (Retry Pattern)
+axiosRetry(axios, {
+  retries: 3,
+  retryDelay: (retryCount) => retryCount * 2500, // backoff linear
+  retryCondition: (error) => {
+    // Retenta se a rede cair ou se a Google/Fastify devolver erro de cota ou limitação
+    return axiosRetry.isNetworkOrIdempotentRequestError(error) || error.response?.status === 429;
+  }
+});
 
 interface DietData {
   nome: string;

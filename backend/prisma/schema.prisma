@@ -1,0 +1,20 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model DietPlan {
+  id               String   @id @default(uuid())
+  name             String
+  weight           String
+  height           String
+  age              String
+  gender           String
+  objective        String
+  level            String
+  dietData         String   
+  createdAt        DateTime @default(now())
+}

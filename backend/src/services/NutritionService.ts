@@ -1,6 +1,9 @@
 import { DataProps } from "../controllers/NutritionController"
 // Importa a biblioteca Google Generative AI
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai"
+import { PrismaClient } from "@prisma/client"
+
+const prisma = new PrismaClient()
 
 class NutritionService {
     async execute({ name, age, gender, weight, height, objective, level }: DataProps) {
@@ -110,6 +113,24 @@ Retorne APENAS o JSON, sem comentários ou formatação markdown.`;
 
                 // O JSON já virá validado pelo model schema, dispensando formatações via Regex.
                 let jsonObject = JSON.parse(jsonText.trim());
+
+                // Salvar de forma assíncrona no SQLite (Tratamento silencioso para não quebrar requisição do usuário)
+                try {
+                    await prisma.dietPlan.create({
+                        data: {
+                            name: String(name),
+                            weight: String(weight),
+                            height: String(height),
+                            age: String(age),
+                            gender: String(gender),
+                            objective: String(objective),
+                            level: String(level),
+                            dietData: JSON.stringify(jsonObject)
+                        }
+                    });
+                } catch (dbErr) {
+                    console.log("Atenção: Falha ao persistir no DB", dbErr);
+                }
                 
                 // Retorna o objeto JSON contendo a dieta gerada
                 return { data: jsonObject }
