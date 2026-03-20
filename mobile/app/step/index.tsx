@@ -1,19 +1,19 @@
-import { View, Text, StyleSheet, Pressable, TextInput, ScrollView, Alert } from 'react-native'
+import { View, Text, StyleSheet, Pressable, ScrollView, Alert } from 'react-native'
 import { colors } from '../../constants/colors'
 import { useState } from 'react'
 import { router } from 'expo-router'
 import { useDataStore } from '../../store/data'
+import { Input } from '../../src/components/Input'
+import { Option } from '../../src/components/Option'
 
 export default function Step() {
   const [page, setPage] = useState<1 | 2>(1)
 
-  // Página 1
   const [name, setName] = useState("")
   const [weight, setWeight] = useState("")
   const [height, setHeight] = useState("")
   const [age, setAge] = useState("")
 
-  // Página 2
   const [gender, setGender] = useState("")
   const [level, setLevel] = useState("")
   const [objective, setObjective] = useState("")
@@ -27,27 +27,14 @@ export default function Step() {
         Alert.alert("Atenção", "Preencha todos os campos antes de continuar")
         return
       }
-
-      setPageOne({
-        name,
-        weight,
-        height,
-        age
-      })
-
+      setPageOne({ name, weight, height, age })
       setPage(2)
     } else {
       if (!gender || !level || !objective) {
         Alert.alert("Atenção", "Preencha todos os campos antes de continuar")
         return
       }
-
-      setPageTwo({
-        gender,
-        level,
-        objective
-      })
-
+      setPageTwo({ gender, level, objective })
       router.push("/create")
     }
   }
@@ -57,187 +44,37 @@ export default function Step() {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={styles.title}>Vamos começar</Text>
         <Text style={styles.subtitle}>
-          {page === 1 
-            ? "Preencha seus dados pessoais"
-            : "Escolha suas preferências"
-          }
+          {page === 1 ? "Preencha seus dados pessoais" : "Escolha suas preferências"}
         </Text>
 
         {page === 1 ? (
           <>
-            <Text style={styles.label}>Nome:</Text>
-            <TextInput
-              style={styles.input}
-              value={name}
-              onChangeText={setName}
-              placeholder="Digite seu nome"
-              placeholderTextColor="#FFFFFF99"
-              keyboardAppearance="dark"
-              selectionColor={colors.green}
-            />
-
-            <Text style={styles.label}>Peso (kg):</Text>
-            <TextInput
-              style={styles.input}
-              value={weight}
-              onChangeText={setWeight}
-              placeholder="Ex: 75"
-              placeholderTextColor="#FFFFFF99"
-              keyboardType="numeric"
-              keyboardAppearance="dark"
-              selectionColor={colors.green}
-            />
-
-            <Text style={styles.label}>Altura (cm):</Text>
-            <TextInput
-              style={styles.input}
-              value={height}
-              onChangeText={setHeight}
-              placeholder="Ex: 175"
-              placeholderTextColor="#FFFFFF99"
-              keyboardType="numeric"
-              keyboardAppearance="dark"
-              selectionColor={colors.green}
-            />
-
-            <Text style={styles.label}>Idade:</Text>
-            <TextInput
-              style={styles.input}
-              value={age}
-              onChangeText={setAge}
-              placeholder="Ex: 25"
-              placeholderTextColor="#FFFFFF99"
-              keyboardType="numeric"
-              keyboardAppearance="dark"
-              selectionColor={colors.green}
-            />
+            <Input label="Nome:" value={name} onChangeText={setName} placeholder="Digite seu nome" />
+            <Input label="Peso (kg):" value={weight} onChangeText={setWeight} placeholder="Ex: 75" keyboardType="numeric" />
+            <Input label="Altura (cm):" value={height} onChangeText={setHeight} placeholder="Ex: 175" keyboardType="numeric" />
+            <Input label="Idade:" value={age} onChangeText={setAge} placeholder="Ex: 25" keyboardType="numeric" />
           </>
         ) : (
           <>
             <Text style={styles.label}>Sexo:</Text>
             <View style={styles.optionsContainer}>
-              <Pressable
-                style={[
-                  styles.optionButton,
-                  gender === "masculino" && styles.optionButtonSelected
-                ]}
-                onPress={() => setGender("masculino")}
-              >
-                <Text style={[
-                  styles.optionText,
-                  gender === "masculino" && styles.optionTextSelected
-                ]}>Masculino</Text>
-              </Pressable>
-
-              <Pressable
-                style={[
-                  styles.optionButton,
-                  gender === "feminino" && styles.optionButtonSelected
-                ]}
-                onPress={() => setGender("feminino")}
-              >
-                <Text style={[
-                  styles.optionText,
-                  gender === "feminino" && styles.optionTextSelected
-                ]}>Feminino</Text>
-              </Pressable>
+              <Option label="Masculino" selected={gender === "masculino"} onPress={() => setGender("masculino")} />
+              <Option label="Feminino" selected={gender === "feminino"} onPress={() => setGender("feminino")} />
             </View>
 
             <Text style={styles.label}>Nível de atividade física:</Text>
             <View style={styles.optionsContainer}>
-              <Pressable
-                style={[
-                  styles.optionButton,
-                  level === "sedentário" && styles.optionButtonSelected
-                ]}
-                onPress={() => setLevel("sedentário")}
-              >
-                <Text style={[
-                  styles.optionText,
-                  level === "sedentário" && styles.optionTextSelected
-                ]}>Sedentário</Text>
-              </Pressable>
-
-              <Pressable
-                style={[
-                  styles.optionButton,
-                  level === "levemente ativo" && styles.optionButtonSelected
-                ]}
-                onPress={() => setLevel("levemente ativo")}
-              >
-                <Text style={[
-                  styles.optionText,
-                  level === "levemente ativo" && styles.optionTextSelected
-                ]}>Levemente Ativo</Text>
-              </Pressable>
-
-              <Pressable
-                style={[
-                  styles.optionButton,
-                  level === "moderadamente ativo" && styles.optionButtonSelected
-                ]}
-                onPress={() => setLevel("moderadamente ativo")}
-              >
-                <Text style={[
-                  styles.optionText,
-                  level === "moderadamente ativo" && styles.optionTextSelected
-                ]}>Moderadamente Ativo</Text>
-              </Pressable>
-
-              <Pressable
-                style={[
-                  styles.optionButton,
-                  level === "muito ativo" && styles.optionButtonSelected
-                ]}
-                onPress={() => setLevel("muito ativo")}
-              >
-                <Text style={[
-                  styles.optionText,
-                  level === "muito ativo" && styles.optionTextSelected
-                ]}>Muito Ativo</Text>
-              </Pressable>
+              <Option label="Sedentário" selected={level === "sedentário"} onPress={() => setLevel("sedentário")} />
+              <Option label="Levemente Ativo" selected={level === "levemente ativo"} onPress={() => setLevel("levemente ativo")} />
+              <Option label="Moderadamente Ativo" selected={level === "moderadamente ativo"} onPress={() => setLevel("moderadamente ativo")} />
+              <Option label="Muito Ativo" selected={level === "muito ativo"} onPress={() => setLevel("muito ativo")} />
             </View>
 
             <Text style={styles.label}>Objetivo:</Text>
             <View style={styles.optionsContainer}>
-              <Pressable
-                style={[
-                  styles.optionButton,
-                  objective === "emagrecer" && styles.optionButtonSelected
-                ]}
-                onPress={() => setObjective("emagrecer")}
-              >
-                <Text style={[
-                  styles.optionText,
-                  objective === "emagrecer" && styles.optionTextSelected
-                ]}>Emagrecer</Text>
-              </Pressable>
-
-              <Pressable
-                style={[
-                  styles.optionButton,
-                  objective === "hipertrofia" && styles.optionButtonSelected
-                ]}
-                onPress={() => setObjective("hipertrofia")}
-              >
-                <Text style={[
-                  styles.optionText,
-                  objective === "hipertrofia" && styles.optionTextSelected
-                ]}>Hipertrofia</Text>
-              </Pressable>
-
-              <Pressable
-                style={[
-                  styles.optionButton,
-                  objective === "definição" && styles.optionButtonSelected
-                ]}
-                onPress={() => setObjective("definição")}
-              >
-                <Text style={[
-                  styles.optionText,
-                  objective === "definição" && styles.optionTextSelected
-                ]}>Definição</Text>
-              </Pressable>
+              <Option label="Emagrecer" selected={objective === "emagrecer"} onPress={() => setObjective("emagrecer")} />
+              <Option label="Hipertrofia" selected={objective === "hipertrofia"} onPress={() => setObjective("hipertrofia")} />
+              <Option label="Definição" selected={objective === "definição"} onPress={() => setObjective("definição")} />
             </View>
           </>
         )}
@@ -286,42 +123,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     marginTop: 16,
   },
-  input: {
-    backgroundColor: colors.white + "15",
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    color: colors.white,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: colors.white + "40",
-  },
   optionsContainer: {
     gap: 12,
-  },
-  optionButton: {
-    backgroundColor: colors.white + "10",
-    borderRadius: 8,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderWidth: 2,
-    borderColor: colors.white + "30",
-  },
-  optionButtonSelected: {
-    backgroundColor: colors.blue + "40",
-    borderColor: colors.blue,
-    borderWidth: 2,
-  },
-  optionText: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: '600',
-    textAlign: 'center',
-    opacity: 0.7,
-  },
-  optionTextSelected: {
-    color: colors.white,
-    opacity: 1,
   },
   button: {
     backgroundColor: colors.blue,

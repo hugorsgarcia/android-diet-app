@@ -1,5 +1,6 @@
 import fastify from "fastify";
 import cors from "@fastify/cors"
+import rateLimit from "@fastify/rate-limit"
 import dotevn from "dotenv"
 import { routes } from "./routes"
 
@@ -15,6 +16,13 @@ app.setErrorHandler((error, request, reply) => {
 const start = async () => {
     // Registra o plugin CORS para permitir solicitações de origens diferentes
     app.register(cors);
+    
+    // Configurando Rate Limit
+    await app.register(rateLimit, {
+      max: 5, // 5 requisições
+      timeWindow: '1 minute' // por minuto por IP
+    });
+
     // Registra as rotas definidas em "routes"
     app.register(routes);
 

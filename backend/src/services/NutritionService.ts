@@ -1,6 +1,6 @@
 import { DataProps } from "../controllers/NutritionController"
 // Importa a biblioteca Google Generative AI
-import { GoogleGenerativeAI } from "@google/generative-ai"
+import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai"
 
 class NutritionService {
     async execute({ name, age, gender, weight, height, objective, level }: DataProps) {
@@ -13,8 +13,54 @@ class NutritionService {
                     temperature: 0.7,
                     topP: 0.8,
                     topK: 40,
-                    maxOutputTokens: 8192, // Aumentado para garantir resposta completa
+                    maxOutputTokens: 8192,
                     responseMimeType: "application/json",
+                    responseSchema: {
+                        type: SchemaType.OBJECT,
+                        properties: {
+                            nome: { type: SchemaType.STRING },
+                            sexo: { type: SchemaType.STRING },
+                            idade: { type: SchemaType.INTEGER },
+                            altura: { type: SchemaType.STRING },
+                            peso: { type: SchemaType.STRING },
+                            objetivo: { type: SchemaType.STRING },
+                            calorias_diarias: { type: SchemaType.INTEGER },
+                            macronutrientes: {
+                                type: SchemaType.OBJECT,
+                                properties: {
+                                    proteinas: { type: SchemaType.STRING },
+                                    carboidratos: { type: SchemaType.STRING },
+                                    gorduras: { type: SchemaType.STRING },
+                                },
+                            },
+                            refeicoes: {
+                                type: SchemaType.ARRAY,
+                                items: {
+                                    type: SchemaType.OBJECT,
+                                    properties: {
+                                        horario: { type: SchemaType.STRING },
+                                        nome: { type: SchemaType.STRING },
+                                        alimentos: {
+                                            type: SchemaType.ARRAY,
+                                            items: { type: SchemaType.STRING }
+                                        }
+                                    }
+                                }
+                            },
+                            suplementos: {
+                                type: SchemaType.ARRAY,
+                                items: {
+                                    type: SchemaType.OBJECT,
+                                    properties: {
+                                        nome: { type: SchemaType.STRING },
+                                        dosagem: { type: SchemaType.STRING },
+                                        quando_tomar: { type: SchemaType.STRING },
+                                    }
+                                }
+                            }
+                        },
+                        required: ["nome", "sexo", "idade", "altura", "peso", "objetivo", "calorias_diarias", "macronutrientes", "refeicoes", "suplementos"]
+                    }
                 }
             })
             
@@ -38,34 +84,7 @@ INSTRUÇÕES:
 4. Inclua horários específicos para cada refeição
 
 FORMATO DE RESPOSTA (JSON):
-{
-  "nome": "string",
-  "sexo": "string", 
-  "idade": number,
-  "altura": "string",
-  "peso": "string",
-  "objetivo": "string",
-  "calorias_diarias": number,
-  "macronutrientes": {
-    "proteinas": "string",
-    "carboidratos": "string", 
-    "gorduras": "string"
-  },
-  "refeicoes": [
-    {
-      "horario": "string",
-      "nome": "string",
-      "alimentos": ["string"]
-    }
-  ],
-  "suplementos": [
-    {
-      "nome": "string",
-      "dosagem": "string",
-      "quando_tomar": "string"
-    }
-  ]
-}
+Siga o schema JSON definido rigorosamente, sem nenhuma quebra extra.
 
 Retorne APENAS o JSON, sem comentários ou formatação markdown.`;
 
@@ -87,13 +106,10 @@ Retorne APENAS o JSON, sem comentários ou formatação markdown.`;
                     throw new Error("Resposta da IA está vazia. Tente novamente.");
                 }
 
-                const jsonText = candidate.content.parts[0].text as String;
+                const jsonText = candidate.content.parts[0].text as string;
 
-                // Remove qualquer formatação markdown e espaços em branco
-                let jsonString = jsonText.replace(/```\w*\n/g, '').replace(/\n```/g, '').trim();
-
-                // Converte a string JSON para um objeto JavaScript
-                let jsonObject = JSON.parse(jsonString)
+                // O JSON já virá validado pelo model schema, dispensando formatações via Regex.
+                let jsonObject = JSON.parse(jsonText.trim());
                 
                 // Retorna o objeto JSON contendo a dieta gerada
                 return { data: jsonObject }

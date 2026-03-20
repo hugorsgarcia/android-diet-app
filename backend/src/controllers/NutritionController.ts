@@ -1,28 +1,31 @@
 import { FastifyRequest, FastifyReply } from "fastify"
 import { NutritionService } from "../services/NutritionService"
+import { z } from "zod"
 
-// Define a interface DataProps para tipar os dados recebidos na requisição
-export interface DataProps {
-    name: String;
-    weight: String;
-    height: String;
-    age: String;
-    gender: String;
-    objective: String;
-    level: String;
-}
-// Classe NutritionController para controlar as requisições relacionadas a dados de nutrição
+const DataSchema = z.object({
+    name: z.string().min(1, "Nome é obrigatório").max(100),
+    weight: z.string().min(1).max(10),
+    height: z.string().min(1).max(10),
+    age: z.string().min(1).max(5),
+    gender: z.string().min(1).max(20),
+    objective: z.string().min(1).max(255),
+    level: z.string().min(1).max(100),
+});
+
+export type DataProps = z.infer<typeof DataSchema>;
+
 class NutritionController {
-    // Método handle que lida com as requisições HTTP e interage com o serviço de nutrição
     async handle(request: FastifyRequest, reply: FastifyReply) {
-        // Extrai as propriedades do corpo da requisição e as tipa com a interface DataProps
-        const { name, weight, height, age, gender, objective, level } = request.body as DataProps;
+        const parsedBody = DataSchema.safeParse(request.body);
 
-        // Instancia o NutritionService
+        if (!parsedBody.success) {
+            return reply.status(400).send({ message: "Dados inválidos", errors: parsedBody.error.format() });
+        }
+
+        const { name, weight, height, age, gender, objective, level } = parsedBody.data;
+
         const createNutrition = new NutritionService();
-        // Chama o método execute do serviço para processar os dados e aguarda o resultado
         const nutrition = await createNutrition.execute({ name, weight, height, age, gender, objective, level });
-        // Envia a resposta com o objeto de dados de nutrição criado
         reply.send(nutrition);
     }
 }
