@@ -3,47 +3,7 @@ import { colors } from '../../constants/colors'
 import { useDataStore } from '../../store/data'
 import { useEffect } from 'react'
 import { router } from 'expo-router'
-import axios from 'axios'
-import axiosRetry from 'axios-retry'
-
-// Configuração de resiliência (Retry Pattern)
-axiosRetry(axios, {
-  retries: 3,
-  retryDelay: (retryCount) => retryCount * 2500, // backoff linear
-  retryCondition: (error) => {
-    // Retenta se a rede cair ou se a Google/Fastify devolver erro de cota ou limitação
-    return axiosRetry.isNetworkOrIdempotentRequestError(error) || error.response?.status === 429;
-  }
-});
-
-interface DietData {
-  nome: string;
-  sexo: string;
-  idade: number;
-  altura: string;
-  peso: string;
-  objetivo: string;
-  calorias_diarias?: number;
-  macronutrientes?: {
-    proteinas: string;
-    carboidratos: string;
-    gorduras: string;
-  };
-  refeicoes: Array<{
-    horario: string;
-    nome: string;
-    alimentos: string[];
-  }>;
-  suplementos: Array<string | {
-    nome: string;
-    dosagem: string;
-    quando_tomar: string;
-  }>;
-}
-
-interface ResponseData {
-  data: DietData;
-}
+import { callGenerateDiet } from '../../src/services/firebase'
 
 export default function Create() {
   const user = useDataStore((state) => state.user)
@@ -51,15 +11,7 @@ export default function Create() {
   useEffect(() => {
     async function generateDiet() {
       try {
-        // Configure a URL da API de acordo com o ambiente:
-        // - Android Emulator: http://10.0.2.2:3333
-        // - Dispositivo físico (Android/iOS): http://192.168.1.10:3333 (IP da sua máquina)
-        // - iOS Simulator: http://localhost:3333
-        
-        // Use o IP da sua máquina para dispositivos físicos
-        const apiUrl = "http://192.168.1.10:3333/create"
-
-        console.log("Enviando dados para API:", {
+        console.log("Enviando dados para Cloud Function:", {
           name: user.name,
           weight: user.weight,
           height: user.height,
@@ -69,7 +21,8 @@ export default function Create() {
           objective: user.objective
         })
 
-        const response = await axios.post<ResponseData>(apiUrl, {
+        // Chama a Cloud Function via Firebase SDK (substitui o Axios)
+        const result = await callGenerateDiet({
           name: user.name,
           weight: user.weight,
           height: user.height,
@@ -77,17 +30,14 @@ export default function Create() {
           gender: user.gender,
           level: user.level,
           objective: user.objective
-        }, {
-          timeout: 60000 // 60 segundos de timeout (tempo para a IA responder)
-        })
+        });
 
-        console.log("Resposta da API:", response.data)
+        console.log("Resposta da Cloud Function:", result)
 
-        if (response.data && response.data.data) {
-          // Navegar para a tela de dieta com os dados
+        if (result && result.data) {
           router.push({
             pathname: "/diet" as any,
-            params: { data: JSON.stringify(response.data.data) }
+            params: { data: JSON.stringify(result.data) }
           })
         }
       } catch (error: any) {
@@ -95,12 +45,14 @@ export default function Create() {
         
         let errorMessage = "Não foi possível gerar sua dieta. Verifique sua conexão e tente novamente."
         
-        if (error.code === 'ECONNABORTED') {
-          errorMessage = "A requisição demorou muito. Tente novamente."
-        } else if (error.code === 'ERR_NETWORK' || error.message?.includes('Network')) {
-          errorMessage = "Erro de conexão. Verifique se o servidor backend está rodando na porta 3333."
-        } else if (error.response) {
-          errorMessage = `Erro do servidor: ${error.response.data?.message || error.response.statusText}`
+        if (error.code === 'functions/resource-exhausted') {
+          errorMessage = "Limite de requisições excedido. Aguarde alguns minutos e tente novamente."
+        } else if (error.code === 'functions/unauthenticated') {
+          errorMessage = "Erro de autenticação. Reinicie o aplicativo."
+        } else if (error.code === 'functions/invalid-argument') {
+          errorMessage = error.message || "Dados inválidos. Verifique os campos e tente novamente."
+        } else if (error.message?.includes('Network')) {
+          errorMessage = "Erro de conexão. Verifique sua internet e tente novamente."
         }
         
         Alert.alert(
