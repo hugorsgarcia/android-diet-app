@@ -18,3 +18,7 @@ web-build/
 
 expo-env.d.ts
 # @end expo-cli
+
+# Securing Secrets and Build Artifacts
+android/
+google-services.json
