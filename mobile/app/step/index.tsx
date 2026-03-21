@@ -1,13 +1,22 @@
 import { View, Text, StyleSheet, Pressable, ScrollView, Alert } from 'react-native'
 import { colors } from '../../constants/colors'
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { router } from 'expo-router'
 import { useDataStore } from '../../store/data'
 import { Input } from '../../src/components/Input'
 import { Option } from '../../src/components/Option'
+import { RewardedAd, RewardedAdEventType, TestIds } from 'react-native-google-mobile-ads'
+
+// Use TestIds durante desenvolvimento. Substitua pelo ID real na produção.
+const REWARDED_AD_UNIT_ID = TestIds.REWARDED;
+
+const rewarded = RewardedAd.createForAdRequest(REWARDED_AD_UNIT_ID, {
+  keywords: ['nutrition', 'diet', 'health', 'fitness'],
+});
 
 export default function Step() {
   const [page, setPage] = useState<1 | 2>(1)
+  const [adLoaded, setAdLoaded] = useState(false)
 
   const [name, setName] = useState("")
   const [weight, setWeight] = useState("")
@@ -20,6 +29,41 @@ export default function Step() {
 
   const setPageOne = useDataStore((state) => state.setPageOne)
   const setPageTwo = useDataStore((state) => state.setPageTwo)
+
+  // Carregar anúncio Rewarded
+  useEffect(() => {
+    const unsubscribeLoaded = rewarded.addAdEventListener(
+      RewardedAdEventType.LOADED,
+      () => setAdLoaded(true)
+    );
+
+    const unsubscribeEarned = rewarded.addAdEventListener(
+      RewardedAdEventType.EARNED_REWARD,
+      (reward) => {
+        console.log('Usuário ganhou recompensa:', reward);
+        // Navegar para criar dieta após assistir o anúncio
+        router.push("/create");
+      }
+    );
+
+    // Carregar o anúncio
+    rewarded.load();
+
+    return () => {
+      unsubscribeLoaded();
+      unsubscribeEarned();
+    };
+  }, []);
+
+  const showRewardedAd = useCallback(() => {
+    if (adLoaded) {
+      rewarded.show();
+    } else {
+      // Se o anúncio não carregou, deixa prosseguir mesmo assim
+      console.log("Ad não carregado, prosseguindo sem anúncio.");
+      router.push("/create");
+    }
+  }, [adLoaded]);
 
   function handleNextPage() {
     if (page === 1) {
@@ -35,7 +79,9 @@ export default function Step() {
         return
       }
       setPageTwo({ gender, level, objective })
-      router.push("/create")
+      
+      // Mostrar anúncio Rewarded antes de gerar dieta
+      showRewardedAd()
     }
   }
 
@@ -81,7 +127,7 @@ export default function Step() {
 
         <Pressable style={styles.button} onPress={handleNextPage}>
           <Text style={styles.buttonText}>
-            {page === 1 ? "Avançar" : "Gerar Dieta"}
+            {page === 1 ? "Avançar" : "🎬 Assistir Anúncio e Gerar Dieta"}
           </Text>
         </Pressable>
 

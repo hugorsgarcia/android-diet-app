@@ -2,6 +2,7 @@ import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native'
 import { colors } from '../../constants/colors'
 import { useLocalSearchParams, router } from 'expo-router'
 import { useDataStore } from '../../store/data'
+import { BannerAd, BannerAdSize, TestIds } from 'react-native-google-mobile-ads'
 
 interface ResponseData {
   nome: string;
@@ -151,7 +152,17 @@ export default function Diet() {
           <Text style={styles.buttonText}>Gerar Nova Dieta</Text>
         </Pressable>
 
-        <View style={{ height: 32 }} />
+        <View style={{ height: 16 }} />
+
+        {/* Banner Ad fixo na tela de leitura */}
+        <View style={styles.adContainer}>
+          <BannerAd
+            unitId={TestIds.ADAPTIVE_BANNER}
+            size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
+          />
+        </View>
+
+        <View style={{ height: 16 }} />
       </ScrollView>
     </View>
   )
@@ -324,5 +335,9 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 18,
     textAlign: 'center',
+  },
+  adContainer: {
+    alignItems: 'center',
+    marginVertical: 8,
   },
 })
