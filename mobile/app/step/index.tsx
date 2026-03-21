@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, Pressable, ScrollView, Alert, Platform } from 'react-native'
 import { colors } from '../../constants/colors'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { router } from 'expo-router'
 import { useDataStore } from '../../store/data'
 import { Input } from '../../src/components/Input'
@@ -20,10 +20,6 @@ if (Platform.OS !== 'web') {
 // Use TestIds durante desenvolvimento. Substitua pelo ID real na produção.
 const REWARDED_AD_UNIT_ID = Platform.OS !== 'web' ? TestIds?.REWARDED : '';
 
-const rewarded = Platform.OS !== 'web' && RewardedAd ? RewardedAd.createForAdRequest(REWARDED_AD_UNIT_ID, {
-  keywords: ['nutrition', 'diet', 'health', 'fitness'],
-}) : null;
-
 export default function Step() {
   const [page, setPage] = useState<1 | 2>(1)
   const [adLoaded, setAdLoaded] = useState(false)
@@ -40,12 +36,22 @@ export default function Step() {
   const setPageOne = useDataStore((state) => state.setPageOne)
   const setPageTwo = useDataStore((state) => state.setPageTwo)
 
+  // Audit Fix #3: rewarded criado dentro do componente via useRef
+  // para evitar instâncias globais inrecuperáveis após erros.
+  const rewardedRef = useRef<any>(null);
+
   // Carregar anúncio Rewarded
   useEffect(() => {
-    if (!rewarded) {
+    if (Platform.OS === 'web' || !RewardedAd) {
       setAdLoaded(true);
       return;
     }
+
+    // Cria o anúncio dentro do ciclo de vida do componente
+    const rewarded = RewardedAd.createForAdRequest(REWARDED_AD_UNIT_ID, {
+      keywords: ['nutrition', 'diet', 'health', 'fitness'],
+    });
+    rewardedRef.current = rewarded;
 
     const unsubscribeLoaded = rewarded.addAdEventListener(
       RewardedAdEventType.LOADED,
@@ -67,10 +73,12 @@ export default function Step() {
     return () => {
       unsubscribeLoaded();
       unsubscribeEarned();
+      rewardedRef.current = null;
     };
   }, []);
 
   const showRewardedAd = useCallback(() => {
+    const rewarded = rewardedRef.current;
     if (adLoaded && rewarded) {
       rewarded.show();
     } else {
