@@ -1,18 +1,28 @@
-import { View, Text, StyleSheet, Pressable, ScrollView, Alert } from 'react-native'
+import { View, Text, StyleSheet, Pressable, ScrollView, Alert, Platform } from 'react-native'
 import { colors } from '../../constants/colors'
 import { useState, useEffect, useCallback } from 'react'
 import { router } from 'expo-router'
 import { useDataStore } from '../../store/data'
 import { Input } from '../../src/components/Input'
 import { Option } from '../../src/components/Option'
-import { RewardedAd, RewardedAdEventType, TestIds } from 'react-native-google-mobile-ads'
+
+let RewardedAd: any = null;
+let RewardedAdEventType: any = null;
+let TestIds: any = null;
+
+if (Platform.OS !== 'web') {
+  const ads = require('react-native-google-mobile-ads');
+  RewardedAd = ads.RewardedAd;
+  RewardedAdEventType = ads.RewardedAdEventType;
+  TestIds = ads.TestIds;
+}
 
 // Use TestIds durante desenvolvimento. Substitua pelo ID real na produção.
-const REWARDED_AD_UNIT_ID = TestIds.REWARDED;
+const REWARDED_AD_UNIT_ID = Platform.OS !== 'web' ? TestIds?.REWARDED : '';
 
-const rewarded = RewardedAd.createForAdRequest(REWARDED_AD_UNIT_ID, {
+const rewarded = Platform.OS !== 'web' && RewardedAd ? RewardedAd.createForAdRequest(REWARDED_AD_UNIT_ID, {
   keywords: ['nutrition', 'diet', 'health', 'fitness'],
-});
+}) : null;
 
 export default function Step() {
   const [page, setPage] = useState<1 | 2>(1)
@@ -32,6 +42,11 @@ export default function Step() {
 
   // Carregar anúncio Rewarded
   useEffect(() => {
+    if (!rewarded) {
+      setAdLoaded(true);
+      return;
+    }
+
     const unsubscribeLoaded = rewarded.addAdEventListener(
       RewardedAdEventType.LOADED,
       () => setAdLoaded(true)
@@ -39,7 +54,7 @@ export default function Step() {
 
     const unsubscribeEarned = rewarded.addAdEventListener(
       RewardedAdEventType.EARNED_REWARD,
-      (reward) => {
+      (reward: any) => {
         console.log('Usuário ganhou recompensa:', reward);
         // Navegar para criar dieta após assistir o anúncio
         router.push("/create");
@@ -56,11 +71,11 @@ export default function Step() {
   }, []);
 
   const showRewardedAd = useCallback(() => {
-    if (adLoaded) {
+    if (adLoaded && rewarded) {
       rewarded.show();
     } else {
       // Se o anúncio não carregou, deixa prosseguir mesmo assim
-      console.log("Ad não carregado, prosseguindo sem anúncio.");
+      console.log("Ad não carregado ou não suportado, prosseguindo sem anúncio.");
       router.push("/create");
     }
   }, [adLoaded]);

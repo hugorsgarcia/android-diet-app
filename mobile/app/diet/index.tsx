@@ -1,8 +1,18 @@
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native'
+import { View, Text, StyleSheet, ScrollView, Pressable, Platform } from 'react-native'
 import { colors } from '../../constants/colors'
 import { useLocalSearchParams, router } from 'expo-router'
 import { useDataStore } from '../../store/data'
-import { BannerAd, BannerAdSize, TestIds } from 'react-native-google-mobile-ads'
+
+let BannerAd: any = null;
+let BannerAdSize: any = null;
+let TestIds: any = null;
+
+if (Platform.OS !== 'web') {
+  const ads = require('react-native-google-mobile-ads');
+  BannerAd = ads.BannerAd;
+  BannerAdSize = ads.BannerAdSize;
+  TestIds = ads.TestIds;
+}
 
 interface ResponseData {
   nome: string;
@@ -155,12 +165,14 @@ export default function Diet() {
         <View style={{ height: 16 }} />
 
         {/* Banner Ad fixo na tela de leitura */}
-        <View style={styles.adContainer}>
-          <BannerAd
-            unitId={TestIds.ADAPTIVE_BANNER}
-            size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
-          />
-        </View>
+        {Platform.OS !== 'web' && BannerAd && TestIds && BannerAdSize && (
+          <View style={styles.adContainer}>
+            <BannerAd
+              unitId={TestIds.ADAPTIVE_BANNER}
+              size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
+            />
+          </View>
+        )}
 
         <View style={{ height: 16 }} />
       </ScrollView>
