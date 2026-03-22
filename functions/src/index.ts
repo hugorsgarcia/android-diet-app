@@ -1,4 +1,5 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { onSchedule } from "firebase-functions/v2/scheduler";
 import * as admin from "firebase-admin";
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import { defineSecret } from "firebase-functions/params";
@@ -143,7 +144,10 @@ Retorne APENAS o JSON, sem comentários ou formatação markdown.`;
             const jsonText = candidate.content.parts[0].text as string;
             const dietObject = JSON.parse(jsonText.trim());
 
-            // 6. Salvar no Firestore
+            // 6. Salvar no Firestore com TTL de 30 dias (DBA fix #3)
+            const expiresAt = new Date();
+            expiresAt.setDate(expiresAt.getDate() + 30);
+
             await db.collection("users").doc(request.auth.uid).collection("diets").add({
                 name,
                 weight,
@@ -153,7 +157,8 @@ Retorne APENAS o JSON, sem comentários ou formatação markdown.`;
                 objective,
                 level,
                 dietData: dietObject,
-                createdAt: admin.firestore.FieldValue.serverTimestamp()
+                createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                expiresAt: admin.firestore.Timestamp.fromDate(expiresAt)
             });
 
             return { success: true, data: dietObject };
@@ -197,5 +202,38 @@ export const getDietHistory = onCall(
         }));
 
         return { diets };
+    }
+);
+
+// DBA fix #3: Limpeza automática de dietas expiradas (roda todo dia às 02:00)
+export const cleanupExpiredDiets = onSchedule(
+    {
+        schedule: "0 2 * * *",  // Cron: todo dia às 02:00 UTC
+        timeZone: "America/Sao_Paulo",
+        timeoutSeconds: 300
+    },
+    async () => {
+        const now = admin.firestore.Timestamp.now();
+        const usersSnapshot = await db.collection("users").listDocuments();
+
+        let totalDeleted = 0;
+
+        for (const userRef of usersSnapshot) {
+            const expired = await userRef
+                .collection("diets")
+                .where("expiresAt", ">=", admin.firestore.Timestamp.fromMillis(0))
+                .where("expiresAt", "<", now)
+                .get();
+
+            const batch = db.batch();
+            expired.docs.forEach(doc => batch.delete(doc.ref));
+
+            if (!expired.empty) {
+                await batch.commit();
+                totalDeleted += expired.size;
+            }
+        }
+
+        console.log(`[cleanupExpiredDiets] Removidas ${totalDeleted} dietas expiradas.`);
     }
 );

@@ -6,5 +6,20 @@ service cloud.firestore {
     match /users/{userId}/{document=**} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
+
+    // Regras específicas para subcoleção de dietas
+    match /users/{userId}/diets/{dietId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+
+      // Escrita: somente via Cloud Functions (origem confiável)
+      // Clientes não escrevem diretamente — a Cloud Function usa Admin SDK
+      allow write: if false;
+
+      // Leitura: bloqueia dietas expiradas no lado do cliente
+      allow get: if request.auth != null
+        && request.auth.uid == userId
+        && (resource.data.expiresAt == null
+          || resource.data.expiresAt > request.time);
+    }
   }
 }
