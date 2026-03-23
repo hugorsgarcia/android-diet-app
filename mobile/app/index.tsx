@@ -1,8 +1,16 @@
 import { View, Text, Image, StyleSheet, Pressable} from 'react-native'
 import { colors } from '../constants/colors'
-import { Link } from 'expo-router'
+import { router } from 'expo-router'
+import { useDataStore } from '../store/data'
 
 export default function Index(){
+  const resetData = useDataStore((state) => state.resetData)
+
+  function handleStart() {
+    resetData()
+    router.push("/step")
+  }
+
   return(
     <View style={styles.container}>
       <Image
@@ -14,13 +22,11 @@ export default function Index(){
       <Text style={styles.text}>
         Sua dieta personalizada com inteligência artificial
       </Text>
-      <Link href="/step" asChild>
-        <Pressable style={styles.button}>
-          <Text style={styles.buttonText}>
-            Gerar dieta
-          </Text>
-        </Pressable>
-      </Link>
+      <Pressable style={styles.button} onPress={handleStart}>
+        <Text style={styles.buttonText}>
+          Gerar dieta
+        </Text>
+      </Pressable>
     </View>
   )
 }

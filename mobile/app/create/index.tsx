@@ -10,6 +10,11 @@ export default function Create() {
 
   useEffect(() => {
     async function generateDiet() {
+      if (!user.name) {
+        console.log("Ignorando chamada: usuário deslogado ou campos limpos.");
+        return;
+      }
+
       try {
         console.log("Enviando dados para Cloud Function:", {
           name: user.name,

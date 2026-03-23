@@ -41,7 +41,6 @@ interface ResponseData {
 
 export default function Diet() {
   const { data } = useLocalSearchParams()
-  const resetData = useDataStore((state) => state.resetData)
   
   const dietData: ResponseData = data ? JSON.parse(data as string) : null
 
@@ -53,8 +52,8 @@ export default function Diet() {
     )
   }
 
-  function handleNewDiet() {
-    resetData()
+  function handleHome() {
+    router.dismissAll()
     router.replace("/")
   }
 
@@ -158,8 +157,8 @@ export default function Diet() {
           </>
         )}
 
-        <Pressable style={styles.button} onPress={handleNewDiet}>
-          <Text style={styles.buttonText}>Gerar Nova Dieta</Text>
+        <Pressable style={styles.button} onPress={handleHome}>
+          <Text style={styles.buttonText}>Voltar para o Início</Text>
         </Pressable>
 
         <View style={{ height: 16 }} />
