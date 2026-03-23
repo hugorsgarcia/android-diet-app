@@ -182,12 +182,12 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 16,
-    color: colors.white,
+    color: colors.gray,
     marginBottom: 24,
   },
   label: {
     fontSize: 16,
-    color: colors.white,
+    color: colors.black,
     fontWeight: 'bold',
     marginBottom: 8,
     marginTop: 16,
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   backButtonText: {
-    color: colors.white,
+    color: colors.gray,
     fontSize: 16,
     textAlign: 'center',
   },

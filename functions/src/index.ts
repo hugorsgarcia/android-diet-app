@@ -1,61 +1,69 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import * as admin from "firebase-admin";
-import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
+import OpenAI from "openai";
 import { defineSecret } from "firebase-functions/params";
 
 admin.initializeApp();
 const db = admin.firestore();
 
-// A chave do Gemini será armazenada no Google Cloud Secret Manager
-const geminiApiKey = defineSecret("GEMINI_API_KEY");
+// O token do Copilot Pro / GitHub será armazenado no Secret Manager
+const githubToken = defineSecret("GITHUB_TOKEN");
 
 // Schema de resposta idêntico ao que estava no NutritionService
+// Schema OpenAI rigorosamente validado JSON (Structured Outputs)
 const dietResponseSchema = {
-    type: SchemaType.OBJECT,
+    type: "object",
     properties: {
-        nome: { type: SchemaType.STRING },
-        sexo: { type: SchemaType.STRING },
-        idade: { type: SchemaType.INTEGER },
-        altura: { type: SchemaType.STRING },
-        peso: { type: SchemaType.STRING },
-        objetivo: { type: SchemaType.STRING },
-        calorias_diarias: { type: SchemaType.INTEGER },
+        nome: { type: "string" },
+        sexo: { type: "string" },
+        idade: { type: "integer" },
+        altura: { type: "string" },
+        peso: { type: "string" },
+        objetivo: { type: "string" },
+        calorias_diarias: { type: "integer" },
         macronutrientes: {
-            type: SchemaType.OBJECT,
+            type: "object",
             properties: {
-                proteinas: { type: SchemaType.STRING },
-                carboidratos: { type: SchemaType.STRING },
-                gorduras: { type: SchemaType.STRING },
+                proteinas: { type: "string" },
+                carboidratos: { type: "string" },
+                gorduras: { type: "string" }
             },
+            required: ["proteinas", "carboidratos", "gorduras"],
+            additionalProperties: false
         },
         refeicoes: {
-            type: SchemaType.ARRAY,
+            type: "array",
             items: {
-                type: SchemaType.OBJECT,
+                type: "object",
                 properties: {
-                    horario: { type: SchemaType.STRING },
-                    nome: { type: SchemaType.STRING },
+                    horario: { type: "string" },
+                    nome: { type: "string" },
                     alimentos: {
-                        type: SchemaType.ARRAY,
-                        items: { type: SchemaType.STRING }
+                        type: "array",
+                        items: { type: "string" }
                     }
-                }
+                },
+                required: ["horario", "nome", "alimentos"],
+                additionalProperties: false
             }
         },
         suplementos: {
-            type: SchemaType.ARRAY,
+            type: "array",
             items: {
-                type: SchemaType.OBJECT,
+                type: "object",
                 properties: {
-                    nome: { type: SchemaType.STRING },
-                    dosagem: { type: SchemaType.STRING },
-                    quando_tomar: { type: SchemaType.STRING },
-                }
+                    nome: { type: "string" },
+                    dosagem: { type: "string" },
+                    quando_tomar: { type: "string" }
+                },
+                required: ["nome", "dosagem", "quando_tomar"],
+                additionalProperties: false
             }
         }
     },
-    required: ["nome", "sexo", "idade", "altura", "peso", "objetivo", "calorias_diarias", "macronutrientes", "refeicoes", "suplementos"]
+    required: ["nome", "sexo", "idade", "altura", "peso", "objetivo", "calorias_diarias", "macronutrientes", "refeicoes", "suplementos"],
+    additionalProperties: false
 };
 
 // Regex de sanitização anti-Prompt Injection
@@ -64,7 +72,7 @@ const DANGEROUS_PATTERNS = /ignore|esqueça|forget|override|aja como|act as|syst
 export const generateDiet = onCall(
     { 
         timeoutSeconds: 120, 
-        secrets: [geminiApiKey],
+        secrets: [githubToken],
         enforceAppCheck: false // Ativar na Sprint 2
     }, 
     async (request) => {
@@ -92,23 +100,14 @@ export const generateDiet = onCall(
         }
 
         try {
-            // 5. Chamada ao Gemini
-            const genAI = new GoogleGenerativeAI(geminiApiKey.value());
-            const model = genAI.getGenerativeModel({
-                model: "gemini-2.0-flash",
-                generationConfig: {
-                    temperature: 0.7,
-                    topP: 0.8,
-                    topK: 40,
-                    maxOutputTokens: 8192,
-                    responseMimeType: "application/json",
-                    responseSchema: dietResponseSchema as any,
-                }
+            // 5. Chamada ao GitHub Models (OpenAI SDK Endpoint via Copilot Pro)
+            // Utilizando o gpt-4o-mini já que "GPT-5 Mini" não existe publicamente ainda na API da Microsoft.
+            const openai = new OpenAI({
+                baseURL: "https://models.inference.ai.azure.com",
+                apiKey: githubToken.value()
             });
 
             const prompt = `
-Você é um nutricionista especialista. Crie uma dieta personalizada completa baseada nos seguintes dados:
-
 DADOS PESSOAIS:
 - Nome: ${name}
 - Sexo: ${gender}
@@ -123,25 +122,39 @@ INSTRUÇÕES:
 2. Crie um plano alimentar balanceado com 5-6 refeições
 3. Sugira suplementos apropriados para o perfil e objetivo
 4. Inclua horários específicos para cada refeição
+`;
 
-FORMATO DE RESPOSTA (JSON):
-Siga o schema JSON definido rigorosamente, sem nenhuma quebra extra.
+            const response = await openai.chat.completions.create({
+                model: "gpt-4o-mini",
+                messages: [
+                    { 
+                        role: "system", 
+                        content: "Você é um nutricionista especialista. Retorne EXATAMENTE o JSON estrito cobrado pelo esquema sem explicações, sem markdown."
+                    },
+                    { role: "user", content: prompt }
+                ],
+                temperature: 0.7,
+                top_p: 0.8,
+                max_tokens: 8192,
+                response_format: {
+                    type: "json_schema",
+                    json_schema: {
+                        name: "dietResponse",
+                        strict: true,
+                        schema: dietResponseSchema
+                    }
+                }
+            });
 
-Retorne APENAS o JSON, sem comentários ou formatação markdown.`;
-
-            const response = await model.generateContent(prompt);
-
-            if (!response.response?.candidates?.[0]?.content?.parts?.[0]) {
+            if (!response.choices?.[0]?.message?.content) {
                 throw new HttpsError("internal", "Resposta da IA está vazia.");
             }
 
-            const candidate = response.response.candidates[0];
-
-            if (candidate.finishReason === "MAX_TOKENS") {
-                throw new HttpsError("resource-exhausted", "Resposta da IA foi truncada. Tente novamente.");
+            if (response.choices[0].finish_reason === "length") {
+                throw new HttpsError("resource-exhausted", "Resposta da IA foi truncada pelo comprimento de tokens.");
             }
 
-            const jsonText = candidate.content.parts[0].text as string;
+            const jsonText = response.choices[0].message.content;
             const dietObject = JSON.parse(jsonText.trim());
 
             // 6. Salvar no Firestore com TTL de 30 dias (DBA fix #3)

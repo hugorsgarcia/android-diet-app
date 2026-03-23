@@ -22,27 +22,27 @@ export function Option({ label, selected, onPress }: OptionProps) {
 
 const styles = StyleSheet.create({
   optionButton: {
-    backgroundColor: colors.white + "10",
+    backgroundColor: colors.white,
     borderRadius: 8,
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderWidth: 2,
-    borderColor: colors.white + "30",
+    borderColor: colors.lightGray,
   },
   optionButtonSelected: {
-    backgroundColor: colors.blue + "40",
-    borderColor: colors.blue,
+    backgroundColor: colors.green + "10",
+    borderColor: colors.green,
     borderWidth: 2,
   },
   optionText: {
-    color: colors.white,
+    color: colors.gray,
     fontSize: 16,
     fontWeight: '600',
     textAlign: 'center',
-    opacity: 0.7,
+    opacity: 1,
   },
   optionTextSelected: {
-    color: colors.white,
+    color: colors.green,
     opacity: 1,
   },
 })

@@ -11,8 +11,8 @@ export function Input({ label, ...rest }: InputProps) {
       <Text style={styles.label}>{label}</Text>
       <TextInput
         style={styles.input}
-        placeholderTextColor="#FFFFFF99"
-        keyboardAppearance="dark"
+        placeholderTextColor={colors.gray}
+        keyboardAppearance="light"
         selectionColor={colors.green}
         {...rest}
       />
@@ -26,19 +26,19 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 16,
-    color: colors.white,
+    color: colors.black,
     fontWeight: 'bold',
     marginBottom: 8,
     marginTop: 16,
   },
   input: {
-    backgroundColor: colors.white + "15",
+    backgroundColor: colors.white,
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    color: colors.white,
+    color: colors.black,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: colors.white + "40",
+    borderColor: colors.lightGray,
   },
 })

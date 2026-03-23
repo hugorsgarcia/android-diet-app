@@ -5,16 +5,10 @@
       "collectionGroup": "diets",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "diets",
-      "queryScope": "COLLECTION",
-      "fields": [
         { "fieldPath": "expiresAt", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     }
   ]
 }
+

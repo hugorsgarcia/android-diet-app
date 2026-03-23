@@ -9,10 +9,10 @@ export default function Index(){
         source={require('../assets/images/logo.png')}
       />
       <Text style={styles.title}>
-        Dieta<Text style={{color: colors.white}}>.AI</Text>
+        Dieta<Text style={{color: colors.black}}>.AI</Text>
       </Text>
       <Text style={styles.text}>
-        Sua dieta personalizda com inteteligência artificial
+        Sua dieta personalizada com inteligência artificial
       </Text>
       <Link href="/step" asChild>
         <Pressable style={styles.button}>
@@ -41,7 +41,7 @@ const styles = StyleSheet.create({
   },
   text:{
     fontSize: 16,
-    color: colors.white,
+    color: colors.gray,
     width: 240,
     textAlign: 'center',
     marginTop: 8,
