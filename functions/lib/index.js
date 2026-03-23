@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.cleanupExpiredDiets = exports.getDietHistory = exports.generateDiet = void 0;
+exports.swapMealFood = exports.cleanupExpiredDiets = exports.getDietHistory = exports.generateDiet = void 0;
 const https_1 = require("firebase-functions/v2/https");
 const scheduler_1 = require("firebase-functions/v2/scheduler");
 const admin = __importStar(require("firebase-admin"));
@@ -249,5 +249,86 @@ exports.cleanupExpiredDiets = (0, scheduler_1.onSchedule)({
         }
     }
     console.log(`[cleanupExpiredDiets] Removidas ${totalDeleted} dietas expiradas.`);
+});
+// ==========================================
+// AI FOOD SWAP (Nutricionista de Bolso)
+// ==========================================
+const swapResponseSchema = {
+    type: "object",
+    properties: {
+        newAlimentos: {
+            type: "array",
+            items: { type: "string" }
+        }
+    },
+    required: ["newAlimentos"],
+    additionalProperties: false
+};
+exports.swapMealFood = (0, https_1.onCall)({
+    timeoutSeconds: 60,
+    secrets: [githubToken],
+    enforceAppCheck: false
+}, async (request) => {
+    if (!request.auth) {
+        throw new https_1.HttpsError("unauthenticated", "O usuário deve estar logado.");
+    }
+    const { mealName, currentFoods, reason, dietContext } = request.data;
+    if (!mealName || !currentFoods || !reason) {
+        throw new https_1.HttpsError("invalid-argument", "Dados incompletos para troca de alimentos.");
+    }
+    // Anti-Prompt Injection
+    const allFields = [mealName, reason, dietContext, ...currentFoods].join(" ");
+    if (DANGEROUS_PATTERNS.test(allFields)) {
+        throw new https_1.HttpsError("invalid-argument", "Entrada contém conteúdo não permitido.");
+    }
+    try {
+        const openai = new openai_1.default({
+            baseURL: "https://models.inference.ai.azure.com",
+            apiKey: githubToken.value()
+        });
+        const prompt = `
+REFEIÇÃO: ${mealName}
+ALIMENTOS ATUAIS: ${currentFoods.join(", ")}
+MOTIVO DA TROCA: ${reason}
+CONTEXTO DA DIETA: ${dietContext}
+
+INSTRUÇÕES:
+1. Substitua TODOS os alimentos desta refeição por alternativas equivalentes em macronutrientes.
+2. Mantenha a mesma quantidade de itens.
+3. Considere o motivo da troca (ex: se é alergia, evite alimentos similares).
+4. Retorne apenas a lista de novos alimentos no formato JSON.
+`;
+        const response = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: [
+                {
+                    role: "system",
+                    content: "Você é um nutricionista especialista. Retorne EXATAMENTE o JSON estrito cobrado pelo esquema sem explicações."
+                },
+                { role: "user", content: prompt }
+            ],
+            temperature: 0.7,
+            max_tokens: 1024,
+            response_format: {
+                type: "json_schema",
+                json_schema: {
+                    name: "swapResponse",
+                    strict: true,
+                    schema: swapResponseSchema
+                }
+            }
+        });
+        if (!response.choices?.[0]?.message?.content) {
+            throw new https_1.HttpsError("internal", "Resposta da IA está vazia.");
+        }
+        const result = JSON.parse(response.choices[0].message.content.trim());
+        return { newAlimentos: result.newAlimentos };
+    }
+    catch (err) {
+        console.error("Erro na troca de alimentos:", err);
+        if (err instanceof https_1.HttpsError)
+            throw err;
+        throw new https_1.HttpsError("internal", "Falha ao trocar alimentos. Tente novamente.");
+    }
 });
 //# sourceMappingURL=index.js.map

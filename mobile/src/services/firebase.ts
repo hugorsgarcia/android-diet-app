@@ -101,3 +101,94 @@ export async function getDietsFromFirestore(userId: string) {
     ...doc.data()
   }));
 }
+
+// ==========================================
+// WATER TRACKER
+// ==========================================
+export async function loadWater(uid: string, date: string) {
+  if (!firestore) return null;
+  const doc = await firestore().collection('users').doc(uid).collection('water').doc(date).get();
+  return doc.exists ? doc.data() : null;
+}
+
+export async function saveWater(uid: string, date: string, data: { glasses: number; goal: number }) {
+  if (!firestore) return;
+  await firestore().collection('users').doc(uid).collection('water').doc(date).set(
+    { ...data, date },
+    { merge: true }
+  );
+}
+
+// ==========================================
+// STREAKS (OFENSIVAS)
+// ==========================================
+export async function loadStreak(uid: string) {
+  if (!firestore) return null;
+  const doc = await firestore().collection('users').doc(uid).collection('streaks').doc('current').get();
+  return doc.exists ? doc.data() : null;
+}
+
+export async function saveStreak(uid: string, data: { current: number; best: number; lastActiveDate: string }) {
+  if (!firestore) return;
+  await firestore().collection('users').doc(uid).collection('streaks').doc('current').set(data, { merge: true });
+}
+
+// ==========================================
+// WEIGHT HISTORY
+// ==========================================
+export async function loadWeightHistory(uid: string) {
+  if (!firestore) return [];
+  const snapshot = await firestore()
+    .collection('users').doc(uid).collection('weight')
+    .orderBy('date', 'asc')
+    .limit(90)
+    .get();
+  return snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
+}
+
+export async function addWeightEntry(uid: string, value: number) {
+  if (!firestore) return;
+  await firestore().collection('users').doc(uid).collection('weight').add({
+    value,
+    date: new Date().toISOString(),
+  });
+}
+
+export async function loadWeightGoal(uid: string) {
+  if (!firestore) return null;
+  const doc = await firestore().collection('users').doc(uid).get();
+  return doc.exists ? doc.data()?.weightGoal || null : null;
+}
+
+export async function saveWeightGoal(uid: string, goal: number) {
+  if (!firestore) return;
+  await firestore().collection('users').doc(uid).set({ weightGoal: goal }, { merge: true });
+}
+
+// ==========================================
+// MEAL CHECK-IN
+// ==========================================
+export async function saveMealCheckins(uid: string, dietId: string, checkins: Record<number, boolean>) {
+  if (!firestore) return;
+  await firestore().collection('users').doc(uid).collection('diets').doc(dietId).set(
+    { checkins },
+    { merge: true }
+  );
+}
+
+// ==========================================
+// AI FOOD SWAP (Cloud Function call)
+// ==========================================
+export async function callSwapMealFood(data: {
+  mealName: string;
+  currentFoods: string[];
+  reason: string;
+  dietContext: string;
+}) {
+  if (!functions) {
+    throw new Error('Firebase Functions not available on this platform');
+  }
+  const swapMealFood = functions().httpsCallable('swapMealFood');
+  const result = await swapMealFood(data);
+  return result.data as { newAlimentos: string[] };
+}
