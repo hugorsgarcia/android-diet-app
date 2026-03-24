@@ -6,6 +6,8 @@ import { getCurrentUser } from '../../src/services/firebase'
 import { callSwapMealFood } from '../../src/services/firebase'
 import { useStreakStore } from '../../src/stores/streakStore'
 import { saveStreak } from '../../src/services/firebase'
+import { saveMealCheckins } from '../../src/services/firebase'
+import { saveDietMeals } from '../../src/services/firebase'
 import { useDiaryStore } from '../../src/stores/diaryStore'
 import { useShoppingStore } from '../../src/stores/shoppingStore'
 import { mapDietToDiaryEntries } from '../../src/services/dietToDiary'
@@ -47,13 +49,16 @@ interface ResponseData {
 }
 
 export default function Diet() {
-  const { data } = useLocalSearchParams()
+  const { data, dietId: dietIdParam } = useLocalSearchParams()
   const streakStore = useStreakStore()
+  const dietId = (dietIdParam as string) || ''
 
   const dietData: ResponseData = data ? JSON.parse(data as string) : null
   const [meals, setMeals] = useState<ResponseData['refeicoes']>(dietData?.refeicoes || [])
   const [checkins, setCheckins] = useState<Record<number, boolean>>({})
   const [swappingIndex, setSwappingIndex] = useState<number | null>(null)
+  // BUG-06: trava global — impede trocas paralelas
+  const [isSwapping, setIsSwapping] = useState(false)
 
   if (!dietData) {
     return (
@@ -69,7 +74,8 @@ export default function Diet() {
   const progressPercent = totalMeals > 0 ? Math.round((checkedMeals / totalMeals) * 100) : 0;
 
   function handleCheckin(index: number, ate: boolean) {
-    setCheckins(prev => ({ ...prev, [index]: ate }));
+    const newCheckins = { ...checkins, [index]: ate };
+    setCheckins(newCheckins);
 
     // Registrar atividade no streak
     streakStore.recordActivity();
@@ -80,6 +86,10 @@ export default function Diet() {
         best: useStreakStore.getState().best,
         lastActiveDate: useStreakStore.getState().lastActiveDate,
       });
+      // BUG-04: persistir check-ins no Firestore
+      if (dietId) {
+        saveMealCheckins(user.uid, dietId, newCheckins);
+      }
     }
   }
 
@@ -100,6 +110,7 @@ export default function Diet() {
   async function doSwap(mealIndex: number, reason: string) {
     const meal = meals[mealIndex];
     setSwappingIndex(mealIndex);
+    setIsSwapping(true); // BUG-06: bloqueia todos os botões de troca
 
     try {
       const result = await callSwapMealFood({
@@ -110,14 +121,22 @@ export default function Diet() {
       });
 
       // Atualizar a refeição localmente
-      setMeals(prev => prev.map((m, i) => 
+      const updatedMeals = meals.map((m, i) =>
         i === mealIndex ? { ...m, alimentos: result.newAlimentos } : m
-      ));
+      );
+      setMeals(updatedMeals);
+
+      // BUG-05: persistir refeições atualizadas no Firestore
+      const user = getCurrentUser();
+      if (user && dietId) {
+        await saveDietMeals(user.uid, dietId, updatedMeals);
+      }
     } catch (error) {
       console.error('Erro ao trocar alimentos:', error);
       Alert.alert('Erro', 'Não foi possível trocar os alimentos. Tente novamente.');
     } finally {
       setSwappingIndex(null);
+      setIsSwapping(false); // BUG-06: libera o bloqueio
     }
   }
 
@@ -244,7 +263,7 @@ export default function Diet() {
               <Pressable
                 style={styles.swapButton}
                 onPress={() => handleSwap(index)}
-                disabled={swappingIndex === index}
+                disabled={isSwapping}  // BUG-06: desabilita TODOS enquanto qualquer troca está em andamento
               >
                 {swappingIndex === index ? (
                   <ActivityIndicator size="small" color={colors.blue} />

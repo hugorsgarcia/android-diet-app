@@ -71,7 +71,7 @@ export async function callGenerateDiet(userData: {
   }
   const generateDiet = functions().httpsCallable('generateDiet');
   const result = await generateDiet(userData);
-  return result.data as { success: boolean; data: any };
+  return result.data as { success: boolean; data: any; dietId?: string };
 }
 
 // Buscar histórico de dietas
@@ -185,6 +185,20 @@ export async function saveWeightGoal(uid: string, goal: number) {
 // ==========================================
 // MEAL CHECK-IN
 // ==========================================
+export async function saveDietMeals(
+  uid: string,
+  dietId: string,
+  meals: Array<{ horario: string; nome: string; alimentos: string[] }>
+) {
+  if (!firestore) return;
+  await firestore()
+    .collection('users')
+    .doc(uid)
+    .collection('diets')
+    .doc(dietId)
+    .set({ refeicoes: meals }, { merge: true });
+}
+
 export async function saveMealCheckins(uid: string, dietId: string, checkins: Record<number, boolean>) {
   if (!firestore) return;
   await firestore().collection('users').doc(uid).collection('diets').doc(dietId).set(

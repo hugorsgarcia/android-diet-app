@@ -2,7 +2,7 @@ import { View, Text, Image, StyleSheet, Pressable, ScrollView } from 'react-nati
 import { colors } from '../constants/colors'
 import { router } from 'expo-router'
 import { useDataStore } from '../store/data'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { WaterTracker } from '../src/components/WaterTracker'
 import { StreakCard } from '../src/components/StreakCard'
 import { WeightCard } from '../src/components/WeightCard'
@@ -29,6 +29,8 @@ export default function Index() {
   const streakStore = useStreakStore()
   const weightStore = useWeightStore()
   const [latestDiet, setLatestDiet] = useState<any>(null)
+  // BUG-02: impede que a sync de água dispare na hidratação inicial do Firestore
+  const isInitialWaterLoad = useRef(true)
 
   // Carregar dados do Firestore ao montar
   useEffect(() => {
@@ -68,8 +70,12 @@ export default function Index() {
     loadData();
   }, []);
 
-  // Salvar água no Firestore quando muda
+  // Salvar água no Firestore quando muda (BUG-02: ignora o primeiro disparo do Firestore)
   useEffect(() => {
+    if (isInitialWaterLoad.current) {
+      isInitialWaterLoad.current = false;
+      return;
+    }
     async function sync() {
       const user = getCurrentUser();
       if (!user || waterStore.glasses === 0) return;
@@ -89,7 +95,7 @@ export default function Index() {
     sync();
   }, [waterStore.glasses]);
 
-  // Salvar peso no Firestore quando muda
+  // Salvar peso no Firestore quando muda (BUG-01: sync() agora é chamado)
   useEffect(() => {
     async function sync() {
       const user = getCurrentUser();
@@ -97,7 +103,7 @@ export default function Index() {
       const latest = weightStore.entries[weightStore.entries.length - 1];
       await firebaseAddWeight(user.uid, latest.value);
     }
-    // Apenas sincroniza se entries mudou (não no primeiro load)
+    sync();
   }, [weightStore.entries.length]);
 
   function handleStart() {
@@ -133,7 +139,7 @@ export default function Index() {
       {latestDiet && (
         <Pressable
           style={styles.dietCard}
-          onPress={() => router.push({ pathname: '/diet' as any, params: { data: JSON.stringify(latestDiet.dietData || latestDiet) } })}
+          onPress={() => router.push({ pathname: '/diet' as any, params: { data: JSON.stringify(latestDiet.dietData || latestDiet), dietId: latestDiet.id || '' } })}
         >
           <Text style={styles.dietCardIcon}>📋</Text>
           <View style={styles.dietCardInfo}>

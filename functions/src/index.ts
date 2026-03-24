@@ -163,7 +163,7 @@ INSTRUÇÕES:
             const expiresAt = new Date();
             expiresAt.setDate(expiresAt.getDate() + 30);
 
-            await db.collection("users").doc(request.auth.uid).collection("diets").add({
+            const dietRef = await db.collection("users").doc(request.auth.uid).collection("diets").add({
                 name,
                 weight,
                 height,
@@ -177,7 +177,7 @@ INSTRUÇÕES:
                 expiresAt: admin.firestore.Timestamp.fromDate(expiresAt)
             });
 
-            return { success: true, data: dietObject };
+            return { success: true, data: dietObject, dietId: dietRef.id };
 
         } catch (err: any) {
             console.error("Erro na geração de dieta:", err);

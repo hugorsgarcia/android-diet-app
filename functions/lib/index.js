@@ -183,7 +183,7 @@ INSTRUÇÕES:
         // 6. Salvar no Firestore com TTL de 30 dias (DBA fix #3)
         const expiresAt = new Date();
         expiresAt.setDate(expiresAt.getDate() + 30);
-        await db.collection("users").doc(request.auth.uid).collection("diets").add({
+        const dietRef = await db.collection("users").doc(request.auth.uid).collection("diets").add({
             name,
             weight,
             height,
@@ -196,7 +196,7 @@ INSTRUÇÕES:
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             expiresAt: admin.firestore.Timestamp.fromDate(expiresAt)
         });
-        return { success: true, data: dietObject };
+        return { success: true, data: dietObject, dietId: dietRef.id };
     }
     catch (err) {
         console.error("Erro na geração de dieta:", err);

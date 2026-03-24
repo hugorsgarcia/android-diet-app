@@ -44,7 +44,7 @@ export default function Create() {
         if (result && result.data) {
           router.push({
             pathname: "/diet" as any,
-            params: { data: JSON.stringify(result.data) }
+            params: { data: JSON.stringify(result.data), dietId: result.dietId || '' }
           })
         }
       } catch (error: any) {
@@ -80,7 +80,7 @@ export default function Create() {
     }
 
     generateDiet()
-  }, [user])
+  }, [user.name])  // BUG-03: usar primitivo estável em vez do objeto inteiro
 
   return (
     <View style={styles.container}>
