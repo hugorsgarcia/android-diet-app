@@ -33,3 +33,6 @@ package-lock.json
 yarn.lock
 pnpm-lock.yaml
 INSTRUCTIONS.MD
+AUDITORIA_ENG_FINAL.md
+.github/instructions/Padrao.instructions.md
+implementation_plan.md
