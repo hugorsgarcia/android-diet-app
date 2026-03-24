@@ -64,6 +64,7 @@ export async function callGenerateDiet(userData: {
   gender: string;
   objective: string;
   level: string;
+  dietType?: string;
 }) {
   if (!functions) {
     throw new Error('Firebase Functions not available on this platform');
@@ -100,6 +101,22 @@ export async function getDietsFromFirestore(userId: string) {
     id: doc.id,
     ...doc.data()
   }));
+}
+
+// Buscar a última dieta gerada pelo usuário
+export async function loadLatestDiet(uid: string) {
+  if (!firestore) return null;
+  const snapshot = await firestore()
+    .collection('users')
+    .doc(uid)
+    .collection('diets')
+    .orderBy('createdAt', 'desc')
+    .limit(1)
+    .get();
+
+  if (snapshot.empty) return null;
+  const doc = snapshot.docs[0];
+  return { id: doc.id, ...doc.data() };
 }
 
 // ==========================================
@@ -174,6 +191,37 @@ export async function saveMealCheckins(uid: string, dietId: string, checkins: Re
     { checkins },
     { merge: true }
   );
+}
+
+// ==========================================
+// DIARY (DIÁRIO ALIMENTAR)
+// ==========================================
+export async function loadDiary(uid: string, date: string) {
+  if (!firestore) return null;
+  const doc = await firestore().collection('users').doc(uid).collection('diary').doc(date).get();
+  return doc.exists ? doc.data() : null;
+}
+
+export async function saveDiary(uid: string, date: string, entries: any[], dailyGoal: number) {
+  if (!firestore) return;
+  await firestore().collection('users').doc(uid).collection('diary').doc(date).set(
+    { entries, dailyGoal },
+    { merge: true }
+  );
+}
+
+// ==========================================
+// FASTING (JEJUM INTERMITENTE)
+// ==========================================
+export async function loadFasting(uid: string) {
+  if (!firestore) return null;
+  const doc = await firestore().collection('users').doc(uid).collection('fasting').doc('current').get();
+  return doc.exists ? doc.data() : null;
+}
+
+export async function saveFasting(uid: string, data: any) {
+  if (!firestore) return;
+  await firestore().collection('users').doc(uid).collection('fasting').doc('current').set(data, { merge: true });
 }
 
 // ==========================================

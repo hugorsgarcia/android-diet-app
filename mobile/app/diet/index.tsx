@@ -6,6 +6,9 @@ import { getCurrentUser } from '../../src/services/firebase'
 import { callSwapMealFood } from '../../src/services/firebase'
 import { useStreakStore } from '../../src/stores/streakStore'
 import { saveStreak } from '../../src/services/firebase'
+import { useDiaryStore } from '../../src/stores/diaryStore'
+import { useShoppingStore } from '../../src/stores/shoppingStore'
+import { mapDietToDiaryEntries } from '../../src/services/dietToDiary'
 
 let BannerAd: any = null;
 let BannerAdSize: any = null;
@@ -279,6 +282,38 @@ export default function Diet() {
             </View>
           </>
         )}
+
+        {/* FEAT-04: Auto-preencher diário com esta dieta */}
+        <Pressable
+          style={styles.autofillButton}
+          onPress={() => {
+            const entries = mapDietToDiaryEntries({
+              ...dietData,
+              calorias_diarias: dietData.calorias_diarias || 2000,
+            });
+            const diaryStore = useDiaryStore.getState();
+            for (const entry of entries) {
+              diaryStore.addEntry(entry);
+            }
+            if (dietData.calorias_diarias) {
+              diaryStore.setDailyCalorieGoal(dietData.calorias_diarias);
+            }
+            Alert.alert('✅ Diário preenchido', `${entries.length} alimentos adicionados ao diário de hoje.`);
+          }}
+        >
+          <Text style={styles.autofillButtonText}>📋 Preencher Diário Automaticamente</Text>
+        </Pressable>
+
+        {/* FEAT-08: Lista de Compras */}
+        <Pressable
+          style={styles.shoppingLinkButton}
+          onPress={() => {
+            useShoppingStore.getState().setFromDiet(meals);
+            router.push('/shopping' as any);
+          }}
+        >
+          <Text style={styles.shoppingLinkButtonText}>🛒 Gerar Lista de Compras</Text>
+        </Pressable>
 
         <Pressable style={styles.button} onPress={handleHome}>
           <Text style={styles.buttonText}>Voltar para o Início</Text>
@@ -576,5 +611,29 @@ const styles = StyleSheet.create({
   adContainer: {
     alignItems: 'center',
     marginVertical: 8,
+  },
+  autofillButton: {
+    backgroundColor: colors.green,
+    borderRadius: 8,
+    paddingVertical: 16,
+    marginTop: 16,
+  },
+  autofillButtonText: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  shoppingLinkButton: {
+    backgroundColor: '#8B5CF6',
+    borderRadius: 8,
+    paddingVertical: 16,
+    marginTop: 12,
+  },
+  shoppingLinkButtonText: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
 })

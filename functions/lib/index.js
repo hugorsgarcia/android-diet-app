@@ -112,13 +112,13 @@ exports.generateDiet = (0, https_1.onCall)({
     if (!request.auth) {
         throw new https_1.HttpsError("unauthenticated", "O usuário deve estar logado.");
     }
-    const { name, weight, height, age, gender, objective, level } = request.data;
+    const { name, weight, height, age, gender, objective, level, dietType } = request.data;
     // 2. Validação básica dos campos
     if (!name || !weight || !height || !age || !gender || !objective || !level) {
         throw new https_1.HttpsError("invalid-argument", "Todos os campos são obrigatórios.");
     }
     // 3. Anti-Prompt Injection
-    const allFields = [name, weight, height, age, gender, objective, level].join(" ");
+    const allFields = [name, weight, height, age, gender, objective, level, dietType || ''].join(" ");
     if (DANGEROUS_PATTERNS.test(allFields)) {
         throw new https_1.HttpsError("invalid-argument", "Entrada contém conteúdo não permitido.");
     }
@@ -142,12 +142,14 @@ DADOS PESSOAIS:
 - Idade: ${age} anos
 - Objetivo: ${objective}
 - Nível de atividade: ${level}
+- Tipo de dieta: ${dietType && dietType !== 'padrao' ? dietType : 'Padrão (balanceada)'}
 
 INSTRUÇÕES:
 1. Calcule as necessidades calóricas e macronutrientes adequadas
 2. Crie um plano alimentar balanceado com 5-6 refeições
 3. Sugira suplementos apropriados para o perfil e objetivo
 4. Inclua horários específicos para cada refeição
+5. Respeite ESTRITAMENTE o tipo de dieta escolhido pelo usuário
 `;
         const response = await openai.chat.completions.create({
             model: "gpt-4o-mini",
@@ -189,6 +191,7 @@ INSTRUÇÕES:
             gender,
             objective,
             level,
+            dietType: dietType || 'padrao',
             dietData: dietObject,
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             expiresAt: admin.firestore.Timestamp.fromDate(expiresAt)

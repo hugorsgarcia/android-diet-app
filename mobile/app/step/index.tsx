@@ -32,6 +32,7 @@ export default function Step() {
   const [gender, setGender] = useState("")
   const [level, setLevel] = useState("")
   const [objective, setObjective] = useState("")
+  const [dietType, setDietType] = useState("")
 
   const setPageOne = useDataStore((state) => state.setPageOne)
   const setPageTwo = useDataStore((state) => state.setPageTwo)
@@ -101,7 +102,7 @@ export default function Step() {
         Alert.alert("Atenção", "Preencha todos os campos antes de continuar")
         return
       }
-      setPageTwo({ gender, level, objective })
+      setPageTwo({ gender, level, objective, dietType: dietType || 'padrao' })
       
       // Mostrar anúncio Rewarded antes de gerar dieta
       showRewardedAd()
@@ -144,6 +145,16 @@ export default function Step() {
               <Option label="Emagrecer" selected={objective === "emagrecer"} onPress={() => setObjective("emagrecer")} />
               <Option label="Hipertrofia" selected={objective === "hipertrofia"} onPress={() => setObjective("hipertrofia")} />
               <Option label="Definição" selected={objective === "definição"} onPress={() => setObjective("definição")} />
+            </View>
+
+            <Text style={styles.label}>Tipo de Dieta:</Text>
+            <View style={styles.optionsContainer}>
+              <Option label="Padrão" selected={dietType === "" || dietType === "padrao"} onPress={() => setDietType("padrao")} />
+              <Option label="Low Carb" selected={dietType === "low carb"} onPress={() => setDietType("low carb")} />
+              <Option label="Keto" selected={dietType === "keto"} onPress={() => setDietType("keto")} />
+              <Option label="Vegetariana" selected={dietType === "vegetariana"} onPress={() => setDietType("vegetariana")} />
+              <Option label="Vegana" selected={dietType === "vegana"} onPress={() => setDietType("vegana")} />
+              <Option label="Mediterrânea" selected={dietType === "mediterrânea"} onPress={() => setDietType("mediterrânea")} />
             </View>
           </>
         )}

@@ -2,7 +2,7 @@ import { View, Text, Image, StyleSheet, Pressable, ScrollView } from 'react-nati
 import { colors } from '../constants/colors'
 import { router } from 'expo-router'
 import { useDataStore } from '../store/data'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { WaterTracker } from '../src/components/WaterTracker'
 import { StreakCard } from '../src/components/StreakCard'
 import { WeightCard } from '../src/components/WeightCard'
@@ -19,13 +19,16 @@ import {
   loadWeightGoal,
   addWeightEntry as firebaseAddWeight,
   saveWeightGoal as firebaseSaveGoal,
+  loadLatestDiet,
 } from '../src/services/firebase'
+import { useShoppingStore } from '../src/stores/shoppingStore'
 
 export default function Index() {
   const resetData = useDataStore((state) => state.resetData)
   const waterStore = useWaterStore()
   const streakStore = useStreakStore()
   const weightStore = useWeightStore()
+  const [latestDiet, setLatestDiet] = useState<any>(null)
 
   // Carregar dados do Firestore ao montar
   useEffect(() => {
@@ -57,6 +60,10 @@ export default function Index() {
           weightGoal || 0
         );
       }
+
+      // Latest Diet
+      const diet = await loadLatestDiet(uid);
+      if (diet) setLatestDiet(diet);
     }
     loadData();
   }, []);
@@ -122,10 +129,50 @@ export default function Index() {
       <WaterTracker />
       <WeightCard />
 
+      {/* Card Ver Dieta Atual */}
+      {latestDiet && (
+        <Pressable
+          style={styles.dietCard}
+          onPress={() => router.push({ pathname: '/diet' as any, params: { data: JSON.stringify(latestDiet.dietData || latestDiet) } })}
+        >
+          <Text style={styles.dietCardIcon}>📋</Text>
+          <View style={styles.dietCardInfo}>
+            <Text style={styles.dietCardTitle}>Ver Dieta Atual</Text>
+            <Text style={styles.dietCardSub}>
+              {latestDiet.dietData?.nome || latestDiet.nome || 'Dieta personalizada'} • {latestDiet.dietData?.calorias_diarias || latestDiet.calorias_diarias || '—'} kcal
+            </Text>
+          </View>
+          <Text style={styles.dietCardArrow}>›</Text>
+        </Pressable>
+      )}
+
       {/* Ações principais */}
       <Pressable style={styles.button} onPress={handleStart}>
         <Text style={styles.buttonText}>🍽️ Gerar Nova Dieta</Text>
       </Pressable>
+
+      <Pressable style={styles.diaryButton} onPress={() => router.push('/diary' as any)}>
+        <Text style={styles.diaryButtonText}>📋 Diário Alimentar</Text>
+      </Pressable>
+
+      <Pressable style={styles.fastingButton} onPress={() => router.push('/fasting' as any)}>
+        <Text style={styles.fastingButtonText}>⏱️ Jejum Intermitente</Text>
+      </Pressable>
+
+      {latestDiet && (
+        <Pressable
+          style={styles.shoppingButton}
+          onPress={() => {
+            const dietData = latestDiet.dietData || latestDiet;
+            if (dietData.refeicoes) {
+              useShoppingStore.getState().setFromDiet(dietData.refeicoes);
+            }
+            router.push('/shopping' as any);
+          }}
+        >
+          <Text style={styles.shoppingButtonText}>🛒 Lista de Compras</Text>
+        </Pressable>
+      )}
 
       <View style={{ height: 40 }} />
     </ScrollView>
@@ -180,5 +227,98 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  diaryButton: {
+    backgroundColor: colors.blue,
+    width: '100%',
+    paddingVertical: 16,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  diaryButtonText: {
+    color: colors.white,
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  fastingButton: {
+    backgroundColor: colors.orange,
+    width: '100%',
+    paddingVertical: 16,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  fastingButtonText: {
+    color: colors.white,
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  shoppingButton: {
+    backgroundColor: '#8B5CF6',
+    width: '100%',
+    paddingVertical: 16,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  shoppingButtonText: {
+    color: colors.white,
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  dietCard: {
+    backgroundColor: colors.white,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.lightGray,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  dietCardIcon: {
+    fontSize: 32,
+  },
+  dietCardInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  dietCardTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.black,
+  },
+  dietCardSub: {
+    fontSize: 13,
+    color: colors.gray,
+    marginTop: 2,
+  },
+  dietCardArrow: {
+    fontSize: 28,
+    color: colors.gray,
   },
 })

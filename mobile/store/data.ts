@@ -8,12 +8,13 @@ export type DataProps = {
   gender: string;
   level: string;
   objective: string;
+  dietType: string;
 }
 
 type DataState = {
   user: DataProps;
-  setPageOne: (data: Omit<DataProps, "gender" | "level" | "objective">) => void;
-  setPageTwo: (data: Pick<DataProps, "gender" | "level" | "objective">) => void;
+  setPageOne: (data: Omit<DataProps, "gender" | "level" | "objective" | "dietType">) => void;
+  setPageTwo: (data: Pick<DataProps, "gender" | "level" | "objective" | "dietType">) => void;
   resetData: () => void;
 }
 
@@ -25,7 +26,8 @@ export const useDataStore = create<DataState>((set) => ({
     age: "",
     gender: "",
     level: "",
-    objective: ""
+    objective: "",
+    dietType: ""
   },
   setPageOne: (data) => set((state) => ({ 
     user: { ...state.user, ...data }
@@ -41,7 +43,8 @@ export const useDataStore = create<DataState>((set) => ({
       age: "",
       gender: "",
       level: "",
-      objective: ""
+      objective: "",
+      dietType: ""
     }
   })
 }))

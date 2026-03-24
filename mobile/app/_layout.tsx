@@ -51,6 +51,26 @@ export default function RootLayout() {
           name="diet/index"
           options={{ headerShown: false }}
         />
+        <Stack.Screen 
+          name="diary/index"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen 
+          name="food-search/index"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen 
+          name="scanner/index"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen 
+          name="fasting/index"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen 
+          name="shopping/index"
+          options={{ headerShown: false }}
+        />
       </Stack>
     </>
   );

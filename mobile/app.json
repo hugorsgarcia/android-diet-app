@@ -35,9 +35,23 @@
       "@react-native-firebase/auth",
       "@react-native-firebase/crashlytics",
       [
+        "expo-camera",
+        {
+          "cameraPermission": "Permitir acesso à câmera para escanear códigos de barras de alimentos.",
+          "barcodeScannerEnabled": true
+        }
+      ],
+      [
         "react-native-google-mobile-ads",
         {
           "androidAppId": "ca-app-pub-3940256099942544~3347511713"
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#22C55E"
         }
       ]
     ],

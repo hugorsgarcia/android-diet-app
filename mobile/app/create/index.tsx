@@ -23,7 +23,8 @@ export default function Create() {
           age: user.age,
           gender: user.gender,
           level: user.level,
-          objective: user.objective
+          objective: user.objective,
+          dietType: user.dietType,
         })
 
         // Chama a Cloud Function via Firebase SDK (substitui o Axios)
@@ -34,7 +35,8 @@ export default function Create() {
           age: user.age,
           gender: user.gender,
           level: user.level,
-          objective: user.objective
+          objective: user.objective,
+          dietType: user.dietType,
         });
 
         console.log("Resposta da Cloud Function:", result)
