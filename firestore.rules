@@ -2,24 +2,91 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Usuários só podem ler/escrever seus próprios dados
-    match /users/{userId}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+    // ── helpers ────────────────────────────────────────────────────────────
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
     }
 
-    // Regras específicas para subcoleção de dietas
+    // ── dietas (somente leitura no cliente; escrita via Admin SDK) ─────────
     match /users/{userId}/diets/{dietId} {
-      allow read: if request.auth != null && request.auth.uid == userId;
+      allow read: if isOwner(userId);
+      allow write: if false; // somente Cloud Functions (Admin SDK)
 
-      // Escrita: somente via Cloud Functions (origem confiável)
-      // Clientes não escrevem diretamente — a Cloud Function usa Admin SDK
-      allow write: if false;
-
-      // Leitura: bloqueia dietas expiradas no lado do cliente
-      allow get: if request.auth != null
-        && request.auth.uid == userId
+      allow get: if isOwner(userId)
         && (resource.data.expiresAt == null
           || resource.data.expiresAt > request.time);
     }
+
+    // ── water tracker (SEC-03) ─────────────────────────────────────────────
+    match /users/{userId}/water/{date} {
+      allow read: if isOwner(userId);
+      allow write: if isOwner(userId)
+        && request.resource.data.keys().hasOnly(['glasses', 'goal', 'date'])
+        && request.resource.data.glasses is int
+        && request.resource.data.glasses >= 0
+        && request.resource.data.glasses <= 50
+        && request.resource.data.goal is int
+        && request.resource.data.goal >= 1
+        && request.resource.data.goal <= 50
+        && request.resource.data.date is string;
+    }
+
+    // ── weight history (SEC-03) ────────────────────────────────────────────
+    match /users/{userId}/weight/{entryId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId)
+        && request.resource.data.keys().hasOnly(['value', 'date'])
+        && request.resource.data.value is number
+        && request.resource.data.value > 0
+        && request.resource.data.value < 700
+        && request.resource.data.date is string;
+      allow update, delete: if isOwner(userId);
+    }
+
+    // ── streaks (SEC-03) ───────────────────────────────────────────────────
+    match /users/{userId}/streaks/{docId} {
+      allow read: if isOwner(userId);
+      allow write: if isOwner(userId)
+        && request.resource.data.keys().hasOnly(['current', 'best', 'lastActiveDate'])
+        && request.resource.data.current is int
+        && request.resource.data.current >= 0
+        && request.resource.data.best is int
+        && request.resource.data.best >= 0
+        && request.resource.data.lastActiveDate is string;
+    }
+
+    // ── diary (SEC-03) ─────────────────────────────────────────────────────
+    match /users/{userId}/diary/{date} {
+      allow read: if isOwner(userId);
+      allow write: if isOwner(userId)
+        && request.resource.data.keys().hasOnly(['entries', 'dailyGoal', 'date'])
+        && request.resource.data.entries is list
+        && request.resource.data.dailyGoal is number
+        && request.resource.data.dailyGoal >= 0;
+    }
+
+    // ── fasting (SEC-03) ───────────────────────────────────────────────────
+    match /users/{userId}/fasting/{docId} {
+      allow read: if isOwner(userId);
+      allow write: if isOwner(userId)
+        && request.resource.data.keys().hasOnly(['isFasting', 'currentPlan', 'startTime', 'endTime'])
+        && request.resource.data.isFasting is bool;
+    }
+
+    // ── rate limits (escrita somente via Admin SDK) ────────────────────────
+    match /rateLimits/{docId} {
+      allow read, write: if false;
+    }
+
+    // ── dados raiz do usuário (meta de peso, etc.) ─────────────────────────
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow write: if isOwner(userId)
+        && request.resource.data.keys().hasOnly(['weightGoal'])
+        && request.resource.data.weightGoal is number
+        && request.resource.data.weightGoal >= 0;
+    }
   }
 }
+

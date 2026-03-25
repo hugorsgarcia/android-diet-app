@@ -18,7 +18,6 @@ import {
   loadWeightHistory,
   loadWeightGoal,
   addWeightEntry as firebaseAddWeight,
-  saveWeightGoal as firebaseSaveGoal,
   loadLatestDiet,
 } from '../src/services/firebase'
 import { useShoppingStore } from '../src/stores/shoppingStore'

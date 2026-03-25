@@ -46,6 +46,36 @@ admin.initializeApp();
 const db = admin.firestore();
 // O token do Copilot Pro / GitHub será armazenado no Secret Manager
 const githubToken = (0, params_1.defineSecret)("GITHUB_TOKEN");
+// ==========================================
+// RATE LIMITING (SEC-02)
+// Máximo de 5 chamadas por UID por hora por função
+// ==========================================
+async function checkRateLimit(uid, functionName, maxCalls = 5, windowMs = 60 * 60 * 1000 // 1 hora
+) {
+    const windowStart = admin.firestore.Timestamp.fromMillis(Date.now() - windowMs);
+    const rateLimitRef = db
+        .collection('rateLimits')
+        .doc(`${uid}_${functionName}`);
+    await db.runTransaction(async (tx) => {
+        const doc = await tx.get(rateLimitRef);
+        const now = admin.firestore.Timestamp.now();
+        if (!doc.exists) {
+            tx.set(rateLimitRef, { count: 1, windowStart: now, uid });
+            return;
+        }
+        const data = doc.data();
+        const withinWindow = data.windowStart > windowStart;
+        if (withinWindow && data.count >= maxCalls) {
+            throw new https_1.HttpsError('resource-exhausted', `Limite de ${maxCalls} requisições por hora atingido. Aguarde e tente novamente.`);
+        }
+        if (withinWindow) {
+            tx.update(rateLimitRef, { count: data.count + 1 });
+        }
+        else {
+            tx.set(rateLimitRef, { count: 1, windowStart: now, uid });
+        }
+    });
+}
 // Schema de resposta idêntico ao que estava no NutritionService
 // Schema OpenAI rigorosamente validado JSON (Structured Outputs)
 const dietResponseSchema = {
@@ -106,12 +136,14 @@ const DANGEROUS_PATTERNS = /ignore|esqueça|forget|override|aja como|act as|syst
 exports.generateDiet = (0, https_1.onCall)({
     timeoutSeconds: 120,
     secrets: [githubToken],
-    enforceAppCheck: false // Ativar na Sprint 2
+    enforceAppCheck: false // SEC-01: habilitar após configurar App Check no console Firebase
 }, async (request) => {
     // 1. Validar autenticação
     if (!request.auth) {
         throw new https_1.HttpsError("unauthenticated", "O usuário deve estar logado.");
     }
+    // SEC-02: Rate limiting — máximo 5 gerações por hora por UID
+    await checkRateLimit(request.auth.uid, 'generateDiet', 5);
     const { name, weight, height, age, gender, objective, level, dietType } = request.data;
     // 2. Validação básica dos campos
     if (!name || !weight || !height || !age || !gender || !objective || !level) {
@@ -206,7 +238,7 @@ INSTRUÇÕES:
             throw new https_1.HttpsError("resource-exhausted", "Limite de requisições excedido. Aguarde e tente novamente.");
         }
         if (err.status === 401 || err.status === 403) {
-            throw new https_1.HttpsError("permission-denied", "Erro de autenticação com a API Gemini.");
+            throw new https_1.HttpsError("permission-denied", "Erro de autenticação com o serviço de IA.");
         }
         throw new https_1.HttpsError("internal", "Falha ao gerar dieta. Tente novamente.");
     }
@@ -229,29 +261,57 @@ exports.getDietHistory = (0, https_1.onCall)({ timeoutSeconds: 30 }, async (requ
     }));
     return { diets };
 });
-// DBA fix #3: Limpeza automática de dietas expiradas (roda todo dia às 02:00)
+// DBA-03: Limpeza automática de dietas expiradas usando collectionGroup (não listDocuments)
+// DBA-01: Roda 2x/dia para manter a subcoleção `water` limpa também
 exports.cleanupExpiredDiets = (0, scheduler_1.onSchedule)({
-    schedule: "0 2 * * *", // Cron: todo dia às 02:00 UTC
+    schedule: "0 2,14 * * *", // Roda às 02:00 e 14:00 UTC
     timeZone: "America/Sao_Paulo",
     timeoutSeconds: 300
 }, async () => {
     const now = admin.firestore.Timestamp.now();
-    const usersSnapshot = await db.collection("users").listDocuments();
     let totalDeleted = 0;
-    for (const userRef of usersSnapshot) {
-        const expired = await userRef
-            .collection("diets")
-            .where("expiresAt", ">=", admin.firestore.Timestamp.fromMillis(0))
-            .where("expiresAt", "<", now)
-            .get();
+    // DBA-03: collectionGroup query escala para qualquer número de usuários
+    // sem iterar manualmente cada documento de /users
+    const expiredDiets = await db
+        .collectionGroup("diets")
+        .where("expiresAt", "<", now)
+        .limit(500) // processa em lotes para evitar timeout
+        .get();
+    if (!expiredDiets.empty) {
         const batch = db.batch();
-        expired.docs.forEach(doc => batch.delete(doc.ref));
-        if (!expired.empty) {
-            await batch.commit();
-            totalDeleted += expired.size;
-        }
+        expiredDiets.docs.forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+        totalDeleted += expiredDiets.size;
     }
-    console.log(`[cleanupExpiredDiets] Removidas ${totalDeleted} dietas expiradas.`);
+    // DBA-01: Remover entradas de water com mais de 30 dias
+    const cutoff30d = new Date();
+    cutoff30d.setDate(cutoff30d.getDate() - 30);
+    const cutoffDateStr = cutoff30d.toISOString().slice(0, 10); // YYYY-MM-DD
+    const oldWater = await db
+        .collectionGroup("water")
+        .where("date", "<", cutoffDateStr)
+        .limit(500)
+        .get();
+    if (!oldWater.empty) {
+        const batch = db.batch();
+        oldWater.docs.forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+        totalDeleted += oldWater.size;
+    }
+    // DBA-01: Remover entradas de rateLimits antigas (> 2 horas)
+    const rateLimitCutoff = admin.firestore.Timestamp.fromMillis(Date.now() - 2 * 60 * 60 * 1000);
+    const oldRateLimits = await db
+        .collection("rateLimits")
+        .where("windowStart", "<", rateLimitCutoff)
+        .limit(500)
+        .get();
+    if (!oldRateLimits.empty) {
+        const batch = db.batch();
+        oldRateLimits.docs.forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+        totalDeleted += oldRateLimits.size;
+    }
+    console.log(`[cleanupExpiredDiets] Removidos ${totalDeleted} documentos expirados.`);
 });
 // ==========================================
 // AI FOOD SWAP (Nutricionista de Bolso)
@@ -270,11 +330,13 @@ const swapResponseSchema = {
 exports.swapMealFood = (0, https_1.onCall)({
     timeoutSeconds: 60,
     secrets: [githubToken],
-    enforceAppCheck: false
+    enforceAppCheck: false // SEC-01: habilitar após configurar App Check no console Firebase
 }, async (request) => {
     if (!request.auth) {
         throw new https_1.HttpsError("unauthenticated", "O usuário deve estar logado.");
     }
+    // SEC-02: Rate limiting — máximo 20 trocas por hora por UID
+    await checkRateLimit(request.auth.uid, 'swapMealFood', 20);
     const { mealName, currentFoods, reason, dietContext } = request.data;
     if (!mealName || !currentFoods || !reason) {
         throw new https_1.HttpsError("invalid-argument", "Dados incompletos para troca de alimentos.");

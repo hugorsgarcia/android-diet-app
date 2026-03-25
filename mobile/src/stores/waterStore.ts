@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { getTodayString } from '../utils/dateUtils';
 
 export type WaterState = {
   glasses: number;
@@ -8,11 +9,6 @@ export type WaterState = {
   resetDaily: () => void;
   setFromFirestore: (data: { glasses: number; goal: number; date: string }) => void;
 };
-
-function getTodayString(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-}
 
 export const useWaterStore = create<WaterState>((set, get) => ({
   glasses: 0,

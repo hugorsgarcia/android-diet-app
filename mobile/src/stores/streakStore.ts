@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { getTodayString, getYesterdayString } from '../utils/dateUtils';
 
 export type StreakState = {
   current: number;
@@ -7,17 +8,6 @@ export type StreakState = {
   recordActivity: () => void;
   setFromFirestore: (data: { current: number; best: number; lastActiveDate: string }) => void;
 };
-
-function getTodayString(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-}
-
-function getYesterdayString(): string {
-  const d = new Date();
-  d.setDate(d.getDate() - 1);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
 
 export const useStreakStore = create<StreakState>((set, get) => ({
   current: 0,

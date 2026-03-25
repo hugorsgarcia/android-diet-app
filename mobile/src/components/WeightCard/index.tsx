@@ -11,6 +11,12 @@ export function WeightCard() {
   const { entries, goal, addEntry, setGoal } = useWeightStore();
   const latest = entries.length > 0 ? entries[entries.length - 1] : null;
 
+  const [showInput, setShowInput] = useState(false);
+  const [inputValue, setInputValue] = useState('');
+  // PROD-02: state para definir meta de peso
+  const [showGoalInput, setShowGoalInput] = useState(false);
+  const [goalValue, setGoalValue] = useState('');
+
   function handleAddWeight() {
     Alert.prompt
       ? Alert.prompt(
@@ -29,9 +35,6 @@ export function WeightCard() {
       : showManualInput();
   }
 
-  const [showInput, setShowInput] = useState(false);
-  const [inputValue, setInputValue] = useState('');
-
   function showManualInput() {
     setShowInput(true);
     setInputValue(latest ? String(latest.value) : '');
@@ -43,6 +46,15 @@ export function WeightCard() {
       addEntry(value);
       setShowInput(false);
       setInputValue('');
+    }
+  }
+
+  function confirmGoal() {
+    const value = parseFloat(goalValue);
+    if (!isNaN(value) && value > 0 && value < 500) {
+      setGoal(value);
+      setShowGoalInput(false);
+      setGoalValue('');
     }
   }
 
@@ -82,9 +94,20 @@ export function WeightCard() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>⚖️ Peso</Text>
-        <Pressable style={styles.addButton} onPress={handleAddWeight}>
-          <Text style={styles.addButtonText}>+ Registrar</Text>
-        </Pressable>
+        <View style={styles.headerActions}>
+          <Pressable style={styles.addButton} onPress={handleAddWeight}>
+            <Text style={styles.addButtonText}>+ Registrar</Text>
+          </Pressable>
+          <Pressable
+            style={styles.goalButton}
+            onPress={() => {
+              setGoalValue(goal > 0 ? String(goal) : '');
+              setShowGoalInput(true);
+            }}
+          >
+            <Text style={styles.goalButtonText}>🎯 Meta</Text>
+          </Pressable>
+        </View>
       </View>
 
       <View style={styles.row}>
@@ -127,6 +150,26 @@ export function WeightCard() {
           </Pressable>
         </View>
       )}
+
+      {/* PROD-02: input para definir meta de peso */}
+      {showGoalInput && (
+        <View style={styles.inputRow}>
+          <TextInput
+            style={styles.input}
+            value={goalValue}
+            onChangeText={setGoalValue}
+            keyboardType="numeric"
+            placeholder="Meta (kg)"
+            placeholderTextColor={colors.gray}
+          />
+          <Pressable style={styles.confirmButton} onPress={confirmGoal}>
+            <Text style={styles.confirmButtonText}>✓</Text>
+          </Pressable>
+          <Pressable style={styles.cancelButton} onPress={() => setShowGoalInput(false)}>
+            <Text style={styles.cancelButtonText}>✕</Text>
+          </Pressable>
+        </View>
+      )}
     </View>
   );
 }
@@ -156,6 +199,10 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: colors.black,
   },
+  headerActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
   addButton: {
     backgroundColor: colors.green + '15',
     borderRadius: 8,
@@ -164,6 +211,17 @@ const styles = StyleSheet.create({
   },
   addButtonText: {
     color: colors.green,
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  goalButton: {
+    backgroundColor: colors.orange + '15',
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  goalButtonText: {
+    color: colors.orange,
     fontSize: 14,
     fontWeight: 'bold',
   },

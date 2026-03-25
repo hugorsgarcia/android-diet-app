@@ -1,16 +1,19 @@
-import { View, Text, StyleSheet, ScrollView, Pressable, Platform, Alert, ActivityIndicator } from 'react-native'
+import { View, Text, StyleSheet, ScrollView, Pressable, Platform, Alert } from 'react-native'
 import { colors } from '../../constants/colors'
 import { useLocalSearchParams, router } from 'expo-router'
 import { useState } from 'react'
-import { getCurrentUser } from '../../src/services/firebase'
-import { callSwapMealFood } from '../../src/services/firebase'
+import {
+  getCurrentUser,
+  callSwapMealFood,
+  saveStreak,
+  saveMealCheckins,
+  saveDietMeals,
+} from '../../src/services/firebase'
 import { useStreakStore } from '../../src/stores/streakStore'
-import { saveStreak } from '../../src/services/firebase'
-import { saveMealCheckins } from '../../src/services/firebase'
-import { saveDietMeals } from '../../src/services/firebase'
 import { useDiaryStore } from '../../src/stores/diaryStore'
 import { useShoppingStore } from '../../src/stores/shoppingStore'
 import { mapDietToDiaryEntries } from '../../src/services/dietToDiary'
+import { MealCard } from '../../src/components/MealCard'
 
 let BannerAd: any = null;
 let BannerAdSize: any = null;
@@ -93,6 +96,18 @@ export default function Diet() {
     }
   }
 
+  // PROD-04: desfazer check-in de uma refeição
+  function handleUndoCheckin(index: number) {
+    const newCheckins = { ...checkins };
+    delete newCheckins[index];
+    setCheckins(newCheckins);
+
+    const user = getCurrentUser();
+    if (user && dietId) {
+      saveMealCheckins(user.uid, dietId, newCheckins);
+    }
+  }
+
   async function handleSwap(mealIndex: number) {
     const meal = meals[mealIndex];
     Alert.alert(
@@ -155,20 +170,18 @@ export default function Diet() {
           </Text>
         </View>
 
-        {/* Progress Bar do Check-in */}
-        {checkedMeals > 0 && (
-          <View style={styles.progressCard}>
-            <Text style={styles.progressTitle}>
-              {progressPercent === 100 ? '🎉 Parabéns!' : '📊 Progresso do Dia'}
-            </Text>
-            <View style={styles.progressBarBg}>
-              <View style={[styles.progressBarFill, { width: `${progressPercent}%` }]} />
-            </View>
-            <Text style={styles.progressText}>
-              Você seguiu {progressPercent}% da dieta hoje ({checkedMeals}/{totalMeals} refeições)
-            </Text>
+        {/* Progress Bar do Check-in — PROD-05: sempre visível */}
+        <View style={styles.progressCard}>
+          <Text style={styles.progressTitle}>
+            {progressPercent === 100 ? '🎉 Parabéns!' : '📊 Progresso do Dia'}
+          </Text>
+          <View style={styles.progressBarBg}>
+            <View style={[styles.progressBarFill, { width: `${progressPercent}%` }]} />
           </View>
-        )}
+          <Text style={styles.progressText}>
+            Você seguiu {progressPercent}% da dieta hoje ({checkedMeals}/{totalMeals} refeições)
+          </Text>
+        </View>
 
         <View style={styles.infoCard}>
           <View style={styles.infoRow}>
@@ -217,62 +230,17 @@ export default function Diet() {
 
         <Text style={styles.sectionTitle}>Refeições</Text>
         {meals.map((refeicao, index) => (
-          <View key={index} style={styles.mealCard}>
-            <View style={styles.mealHeader}>
-              <View>
-                <Text style={styles.mealTime}>{refeicao.horario}</Text>
-                <Text style={styles.mealName}>{refeicao.nome}</Text>
-              </View>
-              {/* Check-in status badge */}
-              {checkins[index] !== undefined && (
-                <Text style={styles.checkinBadge}>
-                  {checkins[index] ? '✅' : '❌'}
-                </Text>
-              )}
-            </View>
-
-            <View style={styles.foodList}>
-              {refeicao.alimentos.map((alimento, foodIndex) => (
-                <View key={foodIndex} style={styles.foodItem}>
-                  <Text style={styles.foodBullet}>•</Text>
-                  <Text style={styles.foodText}>{alimento}</Text>
-                </View>
-              ))}
-            </View>
-
-            {/* Ações da refeição */}
-            <View style={styles.mealActions}>
-              {checkins[index] === undefined ? (
-                <>
-                  <Pressable
-                    style={[styles.checkinButton, styles.checkinAte]}
-                    onPress={() => handleCheckin(index, true)}
-                  >
-                    <Text style={styles.checkinButtonText}>✅ Comi</Text>
-                  </Pressable>
-                  <Pressable
-                    style={[styles.checkinButton, styles.checkinSkipped]}
-                    onPress={() => handleCheckin(index, false)}
-                  >
-                    <Text style={styles.checkinSkippedText}>❌ Furei</Text>
-                  </Pressable>
-                </>
-              ) : null}
-
-              {/* Botão de trocar alimento */}
-              <Pressable
-                style={styles.swapButton}
-                onPress={() => handleSwap(index)}
-                disabled={isSwapping}  // BUG-06: desabilita TODOS enquanto qualquer troca está em andamento
-              >
-                {swappingIndex === index ? (
-                  <ActivityIndicator size="small" color={colors.blue} />
-                ) : (
-                  <Text style={styles.swapButtonText}>🔄 Trocar</Text>
-                )}
-              </Pressable>
-            </View>
-          </View>
+          <MealCard
+            key={index}
+            meal={refeicao}
+            index={index}
+            checkinValue={checkins[index]}
+            isSwapping={isSwapping}
+            swappingThisIndex={swappingIndex === index}
+            onCheckin={handleCheckin}
+            onSwap={handleSwap}
+            onUndo={handleUndoCheckin}
+          />
         ))}
 
         {dietData.suplementos && dietData.suplementos.length > 0 && (
@@ -481,101 +449,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 16,
   },
-  // Meal cards
-  mealCard: {
-    backgroundColor: colors.white,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: colors.lightGray,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-  },
-  mealHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  mealTime: {
-    fontSize: 14,
-    color: colors.gray,
-    marginBottom: 4,
-  },
-  mealName: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: colors.black,
-  },
-  checkinBadge: {
-    fontSize: 28,
-  },
-  foodList: {
-    gap: 8,
-  },
-  foodItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  foodBullet: {
-    fontSize: 16,
-    color: colors.green,
-    marginRight: 8,
-    marginTop: 2,
-  },
-  foodText: {
-    fontSize: 16,
-    color: colors.black,
-    flex: 1,
-  },
-  // Meal actions
-  mealActions: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 14,
-    borderTopWidth: 1,
-    borderTopColor: colors.lightGray,
-    paddingTop: 12,
-  },
-  checkinButton: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  checkinAte: {
-    backgroundColor: colors.green + '15',
-  },
-  checkinSkipped: {
-    backgroundColor: '#EF444415',
-  },
-  checkinButtonText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: colors.green,
-  },
-  checkinSkippedText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#EF4444',
-  },
-  swapButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: colors.blue + '15',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  swapButtonText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: colors.blue,
-  },
+  // Supplements
   supplementCard: {
     backgroundColor: colors.white,
     borderRadius: 12,
