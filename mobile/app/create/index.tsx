@@ -3,7 +3,7 @@ import { colors } from '../../constants/colors'
 import { useDataStore } from '../../store/data'
 import { useEffect } from 'react'
 import { router } from 'expo-router'
-import { callGenerateDiet } from '../../src/services/firebase'
+import { callGenerateDiet } from '../../src/services/supabase'
 
 export default function Create() {
   const user = useDataStore((state) => state.user)

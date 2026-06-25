@@ -3,7 +3,7 @@ import { colors } from '../../constants/colors';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { useFastingStore, FastingPlan } from '../../src/stores/fastingStore';
-import { getCurrentUser, loadFasting, saveFasting } from '../../src/services/firebase';
+import { getCurrentUser, loadFasting, saveFasting } from '../../src/services/supabase';
 import Svg, { Circle } from 'react-native-svg';
 
 const PLANS: { key: FastingPlan; label: string; desc: string }[] = [

@@ -19,7 +19,7 @@ import {
   loadWeightGoal,
   addWeightEntry as firebaseAddWeight,
   loadLatestDiet,
-} from '../src/services/firebase'
+} from '../src/services/supabase'
 import { useShoppingStore } from '../src/stores/shoppingStore'
 
 export default function Index() {

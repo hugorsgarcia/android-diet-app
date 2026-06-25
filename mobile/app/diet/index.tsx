@@ -8,7 +8,7 @@ import {
   saveStreak,
   saveMealCheckins,
   saveDietMeals,
-} from '../../src/services/firebase'
+} from '../../src/services/supabase'
 import { useStreakStore } from '../../src/stores/streakStore'
 import { useDiaryStore } from '../../src/stores/diaryStore'
 import { useShoppingStore } from '../../src/stores/shoppingStore'

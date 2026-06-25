@@ -1,7 +1,7 @@
 import { Stack } from "expo-router";
 import { StatusBar } from "react-native";
 import { useEffect, useState } from "react";
-import { signInAnonymously, onAuthStateChanged } from "../src/services/firebase";
+import { signInAnonymously, onAuthStateChanged, initAuthCache } from "../src/services/supabase";
 
 export default function RootLayout() {
   const [isReady, setIsReady] = useState(false);
@@ -10,9 +10,17 @@ export default function RootLayout() {
     // Login anônimo automático
     const unsubscribe = onAuthStateChanged((user) => {
       if (user) {
-        setIsReady(true);
+        initAuthCache()
+          .then(() => setIsReady(true))
+          .catch(() => setIsReady(true));
       } else {
-        signInAnonymously().then(() => setIsReady(true));
+        signInAnonymously()
+          .then(() => initAuthCache())
+          .then(() => setIsReady(true))
+          .catch((error) => {
+            console.error('Falha no login anônimo — habilite em Supabase Dashboard > Authentication > Sign In Methods > Anonymous:', error);
+            setIsReady(true);
+          });
       }
     });
 

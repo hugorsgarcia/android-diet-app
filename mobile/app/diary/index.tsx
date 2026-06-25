@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { useDiaryStore, MealType } from '../../src/stores/diaryStore';
 import { CalorieArc } from '../../src/components/CalorieArc';
 import { MacroBar } from '../../src/components/MacroBar';
-import { getCurrentUser, loadDiary, saveDiary } from '../../src/services/firebase';
+import { getCurrentUser, loadDiary, saveDiary } from '../../src/services/supabase';
 
 const MEAL_SECTIONS: { key: MealType; label: string; icon: string }[] = [
   { key: 'cafe', label: 'Café da Manhã', icon: '☕' },
